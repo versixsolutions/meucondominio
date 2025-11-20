@@ -1,4 +1,4 @@
-# 🏢 Condomix MVP
+# 🏢 Versix Meu Condominio MVP
 
 Sistema SaaS de gestão condominial focado em transparência, participação e eficiência.
 
@@ -27,8 +27,8 @@ Sistema SaaS de gestão condominial focado em transparência, participação e e
 ## 🚀 Rodando Localmente
 ```bash
 # Clonar repositório
-git clone https://github.com/newecommerceltda/condomix.git
-cd condomix
+git clone https://github.com/newecommerceltda/versix-meu-condominio.git
+cd versix-meu-condominio
 
 # Instalar dependências
 npm install
@@ -54,4 +54,4 @@ npm run dev
 
 ## 📝 Licença
 
-Proprietário - Todos os direitos reservados © 2025 Condomix
+Proprietário - Todos os direitos reservados © 2025 Versix Meu Condominio

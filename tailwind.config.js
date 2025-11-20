@@ -1,16 +1,16 @@
-import { pinheiroParkTheme } from './src/config/theme-pinheiropark';
+import { versixTheme } from './src/config/theme-versix';
 
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
-        primary: pinheiroParkTheme.colors.primary,
-        secondary: pinheiroParkTheme.colors.secondary,
-        accent: pinheiroParkTheme.colors.accent,
-        brown: pinheiroParkTheme.colors.brown,
+        primary: versixTheme.colors.primary,
+        secondary: versixTheme.colors.secondary,
+        accent: versixTheme.colors.accent,
+        brown: versixTheme.colors.brown,
       },
-      fontFamily: pinheiroParkTheme.typography.fontFamily,
+      fontFamily: versixTheme.typography.fontFamily,
     },
   },
   plugins: [],
