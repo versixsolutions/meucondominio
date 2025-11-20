@@ -35,7 +35,7 @@ export default function Dashboard() {
     }
   }, [profile?.id])
 
-  // Função para rolar os cards horizontalmente
+  // Função para rolar os cards horizontalmente (apenas Desktop via botão)
   const scrollCards = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
       const scrollAmount = 220 // Largura do card + gap
@@ -182,7 +182,6 @@ export default function Dashboard() {
   }
 
   return (
-    // Adicionado padding horizontal (px-4) e vertical (py-6) para evitar colagem nas bordas
     <div className="max-w-7xl mx-auto px-4 py-6">
       
       {/* Saudação */}
@@ -193,7 +192,7 @@ export default function Dashboard() {
         <p className="text-gray-600 text-sm">Bem-vindo ao seu painel</p>
       </div>
 
-      {/* Container de Cards com Setas de Navegação */}
+      {/* Container de Cards com Setas de Navegação (Apenas Desktop) */}
       <div className="relative group mb-8">
         
         {/* Botão Seta Esquerda (Desktop) */}
@@ -212,14 +211,7 @@ export default function Dashboard() {
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
         </button>
 
-        {/* Indicador Visual de Scroll (Mobile) - Seta pulsante à direita */}
-        <div className="md:hidden absolute right-0 top-1/2 -translate-y-1/2 z-10 pointer-events-none flex items-center">
-           <div className="bg-gradient-to-l from-white via-white/80 to-transparent pl-4 py-4">
-              <svg className="w-6 h-6 text-primary animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-              </svg>
-           </div>
-        </div>
+        {/* NOTA: A seta pulsante overlay foi removida para evitar cliques acidentais no mobile */}
 
         {/* Lista de Cards Scrollável */}
         <div 
@@ -230,7 +222,6 @@ export default function Dashboard() {
           "
         >
           {/* CARD 1: Comunicados */}
-          {/* Tamanho reduzido: min-w-[200px] (era 260px) */}
           <div onClick={() => navigate('/comunicados')} className="min-w-[200px] md:min-w-[220px] snap-center bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-lg cursor-pointer transition-transform hover:-translate-y-1 relative overflow-hidden">
             <div className="flex items-center justify-between mb-2">
               <div className="text-3xl">📢</div>
