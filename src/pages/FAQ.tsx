@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import PageLayout from '../components/PageLayout'
 import LoadingSpinner from '../components/LoadingSpinner'
 import EmptyState from '../components/EmptyState'
+import Chatbot from '../components/Chatbot' // Importação do Chatbot
 
 interface FAQ {
   id: string
@@ -45,7 +46,6 @@ export default function FAQ() {
       const { data, error } = await supabase
         .from('faqs')
         .select('*')
-        // Ordenamos pelo ID para manter consistência, ou created_at se existir
         .order('question', { ascending: true })
 
       if (error) throw error
@@ -151,7 +151,6 @@ export default function FAQ() {
           Todas
         </button>
         {Object.keys(groupedFAQs).map((catKey) => {
-          // Tenta pegar a config, senão usa um padrão
           const catConfig = CATEGORIES[catKey as keyof typeof CATEGORIES] || { label: catKey, icon: '📁' }
           return (
             <button
@@ -240,6 +239,10 @@ export default function FAQ() {
           }}
         />
       )}
+
+      {/* Inserção do Chatbot Flutuante */}
+      <Chatbot />
+      
     </PageLayout>
   )
 }
