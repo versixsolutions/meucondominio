@@ -7,8 +7,10 @@ interface UserProfile {
   email: string
   full_name: string | null
   role: 'sindico' | 'morador' | 'admin' | 'pending'
-  phone: string | null
-  unit_number: string | null
+  phone: string | null          // Novo
+  unit_number: string | null    // Novo
+  resident_type: string | null  // Novo
+  is_whatsapp: boolean | null   // Novo
   condominio_id: string | null
   condominio_name: string | null
 }
@@ -19,7 +21,16 @@ interface AuthContextType {
   session: Session | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, fullName: string, condominioId: string) => Promise<void>
+  signUp: (
+    email: string, 
+    password: string, 
+    fullName: string, 
+    condominioId: string,
+    phone: string,
+    unitNumber: string,
+    residentType: string,
+    isWhatsapp: boolean
+  ) => Promise<void>
   signOut: () => Promise<void>
   isSindico: boolean
   isAdmin: boolean
@@ -60,7 +71,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function loadProfile(userId: string) {
     try {
-      // CORREÇÃO: .maybeSingle() evita erro 406 se o perfil não existir
       const { data, error } = await supabase
         .from('users')
         .select('*, condominios(name)')
@@ -89,7 +99,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error
   }
 
-  async function signUp(email: string, password: string, fullName: string, condominioId: string) {
+  async function signUp(
+    email: string, 
+    password: string, 
+    fullName: string, 
+    condominioId: string,
+    phone: string,
+    unitNumber: string,
+    residentType: string,
+    isWhatsapp: boolean
+  ) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -97,6 +116,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data: {
           full_name: fullName,
           condominio_id: condominioId,
+          phone: phone,
+          unit_number: unitNumber,
+          resident_type: residentType,
+          is_whatsapp: isWhatsapp,
         },
       },
     })
@@ -104,9 +127,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
-    setProfile(null)
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) console.warn('Aviso no logout:', error.message)
+    } catch (err) {
+      console.warn('Sessão já estava encerrada ou inválida:', err)
+    } finally {
+      setProfile(null)
+      setUser(null)
+      setSession(null)
+      localStorage.clear()
+    }
   }
 
   const value = {

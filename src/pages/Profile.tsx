@@ -32,30 +32,20 @@ export default function Profile() {
       setLoading(true)
       const userId = profile?.id
 
-      // 1. Buscar Votos do Usuário
       const { data: votos } = await supabase
         .from('votos')
-        .select(`
-          id,
-          vote,
-          voted_at,
-          votacao:votacao_id (
-            title
-          )
-        `)
+        .select('id, vote, voted_at, votacao:votacao_id(title)')
         .eq('user_id', userId)
         .order('voted_at', { ascending: false })
         .limit(10)
 
-      // 2. Buscar Ocorrências do Usuário
       const { data: ocorrencias } = await supabase
         .from('ocorrencias')
         .select('*')
-        .eq('author_id', userId) // ou reported_by dependendo do seu banco
+        .eq('author_id', userId)
         .order('created_at', { ascending: false })
         .limit(10)
 
-      // Normalizar dados
       const myActivities: Activity[] = []
 
       votos?.forEach((v: any) => {
@@ -80,7 +70,6 @@ export default function Profile() {
         })
       })
 
-      // Ordenar por data
       const sorted = myActivities.sort((a, b) => 
         new Date(b.date).getTime() - new Date(a.date).getTime()
       )
@@ -111,7 +100,7 @@ export default function Profile() {
         <div className="px-6 pb-6">
           <div className="relative flex justify-between items-end -mt-12 mb-4">
             <div className="w-24 h-24 bg-white rounded-full p-1 shadow-md">
-              <div className="w-full h-full bg-gray-200 rounded-full flex items-center justify-center text-3xl">
+              <div className="w-full h-full bg-gray-200 rounded-full flex items-center justify-center text-3xl uppercase text-gray-400 font-bold">
                 {profile?.full_name?.charAt(0) || '👤'}
               </div>
             </div>
@@ -126,6 +115,10 @@ export default function Profile() {
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{profile?.full_name}</h2>
             <p className="text-gray-500 font-medium">{profile?.email}</p>
+            <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
+               <span>📞 {profile?.phone || 'Não informado'}</span>
+               {profile?.is_whatsapp && <span className="text-green-600 text-xs bg-green-50 px-1.5 rounded border border-green-200">WhatsApp</span>}
+            </div>
             
             <div className="mt-4 grid grid-cols-2 gap-4">
               <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
@@ -133,8 +126,8 @@ export default function Profile() {
                 <p className="font-semibold text-gray-900">{profile?.unit_number || 'N/A'}</p>
               </div>
               <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                <p className="text-xs text-gray-500 uppercase font-bold">Perfil</p>
-                <p className="font-semibold text-gray-900 capitalize">{profile?.role || 'Morador'}</p>
+                <p className="text-xs text-gray-500 uppercase font-bold">Tipo</p>
+                <p className="font-semibold text-gray-900 capitalize">{profile?.resident_type || 'Morador'}</p>
               </div>
             </div>
             
@@ -187,7 +180,6 @@ export default function Profile() {
         )}
       </div>
       
-      {/* Atalho para Ocorrências (já que saiu do menu principal no mobile) */}
       <div className="mt-6">
           <button 
             onClick={() => navigate('/ocorrencias')}
