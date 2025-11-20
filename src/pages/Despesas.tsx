@@ -54,20 +54,36 @@ export default function Despesas() {
 
   useEffect(() => {
     loadDespesas()
-    // Define mês atual como padrão
-    const now = new Date()
-    setSelectedMonth(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
+    // Removemos a definição forçada do mês atual aqui para deixar a função loadDespesas decidir
   }, [])
 
   async function loadDespesas() {
     try {
+      setLoading(true)
       const { data, error } = await supabase
         .from('despesas')
         .select('*')
         .order('due_date', { ascending: false })
 
       if (error) throw error
-      setDespesas(data || [])
+      
+      const loadedData = data || []
+      setDespesas(loadedData)
+
+      // LÓGICA INTELIGENTE DE DATA:
+      // Se houver dados, seleciona o mês do registro mais recente automaticamente.
+      // Isso evita que o usuário veja uma tela em branco se o mês atual não tiver lançamentos.
+      if (loadedData.length > 0 && !selectedMonth) {
+        const mostRecentDate = loadedData[0].due_date // Já vem ordenado DESC
+        // Pega YYYY-MM da string de data (formato ISO yyyy-mm-dd)
+        const recentMonth = mostRecentDate.substring(0, 7)
+        setSelectedMonth(recentMonth)
+      } else if (!selectedMonth) {
+        // Fallback para mês atual se não tiver dados
+        const now = new Date()
+        setSelectedMonth(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
+      }
+
     } catch (error) {
       console.error('Erro ao carregar despesas:', error)
     } finally {
@@ -91,9 +107,9 @@ export default function Despesas() {
 
       // Filtro de Mês (Baseado no Vencimento)
       if (selectedMonth) {
-        const dueDate = new Date(d.due_date)
-        // Ajuste de timezone simples para pegar o mês correto da string
-        const expenseMonth = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, '0')}`
+        // Comparação simples de string YYYY-MM é mais segura contra fuso horário
+        // assumindo que d.due_date vem como YYYY-MM-DD do banco
+        const expenseMonth = d.due_date.substring(0, 7)
         if (expenseMonth !== selectedMonth) return false
       }
 
@@ -131,9 +147,11 @@ export default function Despesas() {
 
   // 3. Dados para o Gráfico de Histórico (Últimos 6 meses - Ignora filtro de mês atual)
   const historyData = useMemo(() => {
+    // Define o mês de referência (hoje ou o selecionado)
+    const refDate = selectedMonth ? new Date(selectedMonth + '-02') : new Date()
+    
     const months: Record<string, number> = {}
-    const today = new Date()
-    const sixMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 5, 1)
+    const sixMonthsAgo = new Date(refDate.getFullYear(), refDate.getMonth() - 5, 1)
 
     // Inicializa os últimos 6 meses com 0
     for (let i = 0; i < 6; i++) {
@@ -151,14 +169,14 @@ export default function Despesas() {
 
     return Object.entries(months).map(([key, value]) => {
       const [year, month] = key.split('-')
-      const dateObj = new Date(Number(year), Number(month) - 1, 1)
+      const dateObj = new Date(Number(year), Number(month) - 1, 2) // Dia 2 para evitar fuso
       return {
         label: dateObj.toLocaleString('pt-BR', { month: 'short' }).toUpperCase(),
         value,
         fullDate: key
       }
     })
-  }, [despesas])
+  }, [despesas, selectedMonth]) // Recalcula se mudar o mês selecionado para focar o gráfico
 
   // Máximo valor para escala do gráfico de histórico
   const maxHistoryValue = Math.max(...historyData.map(d => d.value), 1)
