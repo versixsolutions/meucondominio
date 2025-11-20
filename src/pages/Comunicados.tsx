@@ -10,8 +10,8 @@ interface Comunicado {
   id: string
   title: string
   content: string
-  type: string // 'assembleia' | 'financeiro' | 'urgente' | 'informativo' | 'geral'
-  priority: number // 1: Normal, 2: Alta, 3: Urgente
+  type: string
+  priority: number
   published_at: string
   created_at: string
   author: {
@@ -21,49 +21,118 @@ interface Comunicado {
   is_read: boolean
 }
 
-// Configuração visual baseada nos tipos do banco de dados
 const TYPE_CONFIG: Record<string, any> = {
-  'assembleia': { 
-    label: 'Assembleia', 
-    color: 'bg-indigo-100 text-indigo-800 border-indigo-200', 
-    icon: '⚖️',
-    badgeColor: 'bg-indigo-600'
-  },
-  'financeiro': { 
-    label: 'Financeiro', 
-    color: 'bg-emerald-100 text-emerald-800 border-emerald-200', 
-    icon: '💰',
-    badgeColor: 'bg-emerald-600'
-  },
-  'urgente': { 
-    label: 'Urgente', 
-    color: 'bg-red-100 text-red-800 border-red-200', 
-    icon: '🚨',
-    badgeColor: 'bg-red-600'
-  },
-  'informativo': { 
-    label: 'Informativo', 
-    color: 'bg-blue-100 text-blue-800 border-blue-200', 
-    icon: 'ℹ️',
-    badgeColor: 'bg-blue-600'
-  },
-  'importante': { 
-    label: 'Importante', 
-    color: 'bg-orange-100 text-orange-800 border-orange-200', 
-    icon: '⚠️',
-    badgeColor: 'bg-orange-600'
-  },
-  'geral': { 
-    label: 'Geral', 
-    color: 'bg-gray-100 text-gray-800 border-gray-200', 
-    icon: '📋',
-    badgeColor: 'bg-gray-600'
-  }
+  'assembleia': { label: 'Assembleia', color: 'bg-indigo-100 text-indigo-800 border-indigo-200', icon: '⚖️' },
+  'financeiro': { label: 'Financeiro', color: 'bg-emerald-100 text-emerald-800 border-emerald-200', icon: '💰' },
+  'urgente': { label: 'Urgente', color: 'bg-red-100 text-red-800 border-red-200', icon: '🚨' },
+  'informativo': { label: 'Informativo', color: 'bg-blue-100 text-blue-800 border-blue-200', icon: 'ℹ️' },
+  'importante': { label: 'Importante', color: 'bg-orange-100 text-orange-800 border-orange-200', icon: '⚠️' },
+  'geral': { label: 'Geral', color: 'bg-gray-100 text-gray-800 border-gray-200', icon: '📋' }
+}
+
+// Sub-componente para gerenciar o estado de expansão de cada card individualmente
+function ComunicadoCard({ comunicado, onMarkRead }: { comunicado: Comunicado, onMarkRead: (id: string) => void }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const typeConfig = TYPE_CONFIG[comunicado.type] || TYPE_CONFIG['geral']
+  const isHighPriority = comunicado.priority >= 3
+
+  return (
+    <div
+      className={`
+        relative bg-white rounded-xl shadow-sm border-l-4 overflow-hidden transition-all duration-300
+        ${!comunicado.is_read ? 'ring-1 ring-purple-400 ring-offset-1' : ''}
+        ${isExpanded ? 'shadow-md' : ''}
+      `}
+      style={{ borderLeftColor: isHighPriority ? '#EF4444' : '#E5E7EB' }}
+    >
+      {/* Badge de Novo */}
+      {!comunicado.is_read && (
+        <div className="absolute top-0 right-0 bg-purple-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl shadow-sm z-10">
+          NOVO
+        </div>
+      )}
+
+      <div className="p-5">
+        {/* Cabeçalho */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1 pr-6">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${typeConfig.color}`}>
+                {typeConfig.icon} {typeConfig.label}
+              </span>
+              
+              <span className="text-xs text-gray-400 font-medium">
+                {formatDateTime(comunicado.published_at)}
+              </span>
+            </div>
+            
+            <h3 className={`text-lg font-bold leading-tight ${!comunicado.is_read ? 'text-gray-900' : 'text-gray-700'}`}>
+              {comunicado.title}
+            </h3>
+          </div>
+        </div>
+
+        {/* Conteúdo com Expansão/Retração */}
+        <div className={`
+          prose prose-sm max-w-none text-gray-600 bg-gray-50/50 p-3 rounded-lg border border-gray-100
+          ${!isExpanded ? 'line-clamp-3 relative' : ''}
+        `}>
+          <p className="leading-relaxed whitespace-pre-line m-0">
+            {comunicado.content}
+          </p>
+          {/* Gradiente para indicar que tem mais texto (apenas quando fechado) */}
+          {!isExpanded && (
+            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-gray-50 to-transparent pointer-events-none" />
+          )}
+        </div>
+
+        {/* Botão de Ver Mais */}
+        <button 
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="mt-2 text-sm font-semibold text-purple-600 hover:text-purple-800 flex items-center gap-1 transition-colors"
+        >
+          {isExpanded ? 'Ler menos' : 'Saiba mais...'}
+        </button>
+
+        {/* Rodapé e Ações (Só mostra se estiver expandido ou se não foi lido para economizar espaço visual inicial) */}
+        <div className={`
+          flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 mt-2 border-t border-gray-100
+          transition-all duration-300
+          ${!isExpanded && comunicado.is_read ? 'hidden' : 'flex'}
+        `}>
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <span className="font-medium text-gray-900">
+              {comunicado.author?.full_name || 'Administração'}
+            </span>
+            <span className="text-gray-300">•</span>
+            <span className="capitalize">{comunicado.author?.role || 'Gestão'}</span>
+          </div>
+
+          {!comunicado.is_read ? (
+            <button
+              onClick={() => onMarkRead(comunicado.id)}
+              className="w-full sm:w-auto bg-purple-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-purple-700 transition shadow-sm flex items-center justify-center gap-2"
+            >
+              <span>✓</span> Marcar lido
+            </button>
+          ) : (
+            <span className="flex items-center gap-1 text-green-600 text-xs font-semibold">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Lido
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function Comunicados() {
   const [comunicados, setComunicados] = useState<Comunicado[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedType, setSelectedType] = useState<string | null>(null)
   const { user } = useAuth()
 
   useEffect(() => {
@@ -72,7 +141,6 @@ export default function Comunicados() {
 
   async function loadComunicados() {
     try {
-      // Busca comunicados ordenados por Prioridade (DESC) e depois por Data (DESC)
       const { data: comunicadosData, error: comunicadosError } = await supabase
         .from('comunicados')
         .select(`
@@ -83,17 +151,13 @@ export default function Comunicados() {
           priority,
           published_at,
           created_at,
-          author:author_id (
-            full_name,
-            role
-          )
+          author:author_id (full_name, role)
         `)
         .order('priority', { ascending: false })
         .order('published_at', { ascending: false })
 
       if (comunicadosError) throw comunicadosError
 
-      // Busca status de leitura
       const { data: readsData, error: readsError } = await supabase
         .from('comunicado_reads')
         .select('comunicado_id')
@@ -107,7 +171,6 @@ export default function Comunicados() {
         ...c,
         author: Array.isArray(c.author) ? c.author[0] : c.author,
         is_read: readIds.has(c.id),
-        // Fallback para published_at se for nulo (embora o banco tenha, segurança extra)
         published_at: c.published_at || c.created_at
       })) || []
 
@@ -122,39 +185,27 @@ export default function Comunicados() {
   async function markAsRead(comunicadoId: string) {
     try {
       if (!user) return
-
       const { error } = await supabase
         .from('comunicado_reads')
-        .insert({
-          comunicado_id: comunicadoId,
-          user_id: user.id,
-        })
+        .insert({ comunicado_id: comunicadoId, user_id: user.id })
 
       if (error) throw error
 
       setComunicados(prev =>
-        prev.map(c =>
-          c.id === comunicadoId ? { ...c, is_read: true } : c
-        )
+        prev.map(c => c.id === comunicadoId ? { ...c, is_read: true } : c)
       )
     } catch (error) {
       console.error('Erro ao marcar como lido:', error)
     }
   }
 
-  // Helper para renderizar quebras de linha corretamente
-  function renderContent(content: string) {
-    return content.split('\n').map((line, index) => (
-      <span key={index}>
-        {line}
-        <br />
-      </span>
-    ))
-  }
+  const filteredComunicados = selectedType 
+    ? comunicados.filter(c => c.type === selectedType)
+    : comunicados
 
   const unreadCount = comunicados.filter(c => !c.is_read).length
 
-  if (loading) return <LoadingSpinner message="Carregando quadro de avisos..." />
+  if (loading) return <LoadingSpinner message="Carregando avisos..." />
 
   return (
     <PageLayout
@@ -163,125 +214,66 @@ export default function Comunicados() {
       icon="📢"
       headerAction={
         unreadCount > 0 ? (
-          <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg inline-block border border-white/30 shadow-sm">
-            <p className="text-sm font-bold text-white flex items-center gap-2">
-              <span className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></span>
-              {unreadCount} não {unreadCount === 1 ? 'lido' : 'lidos'}
+          <div className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full inline-block border border-white/30 shadow-sm">
+            <p className="text-xs font-bold text-white flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse"></span>
+              {unreadCount} não lidos
             </p>
           </div>
         ) : null
       }
     >
-      {/* Filtro Rápido / Legenda (Visual apenas) */}
-      <div className="flex flex-wrap gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-        {Object.entries(TYPE_CONFIG).map(([key, config]) => (
-          <div key={key} className={`px-3 py-1 rounded-full text-xs font-bold border ${config.color} opacity-80`}>
-            {config.icon} {config.label}
-          </div>
-        ))}
+      {/* Filtros com Rolagem Horizontal (Scroll Snap) */}
+      <div className="relative mb-6 -mx-4 px-4">
+        <div className="flex flex-nowrap gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x">
+          <button
+            onClick={() => setSelectedType(null)}
+            className={`snap-start shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition border ${
+              !selectedType
+                ? 'bg-purple-600 text-white border-purple-600'
+                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            Todos
+          </button>
+          {Object.entries(TYPE_CONFIG).map(([key, config]) => (
+            <button
+              key={key}
+              onClick={() => setSelectedType(key)}
+              className={`snap-start shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition border flex items-center gap-1 ${
+                selectedType === key
+                  ? `${config.color} border-transparent shadow-sm ring-1 ring-offset-1`
+                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              <span>{config.icon}</span> {config.label}
+            </button>
+          ))}
+        </div>
+        {/* Gradiente lateral para indicar rolagem */}
+        <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-gray-50 to-transparent pointer-events-none md:hidden" />
       </div>
 
       {/* Lista de Comunicados */}
-      {comunicados.length > 0 ? (
-        <div className="space-y-6">
-          {comunicados.map((comunicado) => {
-            // Configuração visual baseada no tipo, com fallback para 'geral'
-            const typeConfig = TYPE_CONFIG[comunicado.type] || TYPE_CONFIG['geral']
-            const isHighPriority = comunicado.priority >= 3
-
-            return (
-              <div
-                key={comunicado.id}
-                className={`
-                  relative bg-white rounded-xl shadow-sm border-l-4 overflow-hidden transition-all hover:shadow-md
-                  ${!comunicado.is_read ? 'ring-2 ring-purple-400 ring-offset-2' : ''}
-                `}
-                style={{ borderLeftColor: isHighPriority ? '#EF4444' : '#E5E7EB' }} // Borda vermelha se urgente
-              >
-                {/* Badge de Novo */}
-                {!comunicado.is_read && (
-                  <div className="absolute top-0 right-0 bg-purple-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl shadow-sm z-10">
-                    NOVO
-                  </div>
-                )}
-
-                <div className="p-5 md:p-6">
-                  {/* Cabeçalho do Card */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1 pr-8">
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        {/* Badge do Tipo */}
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${typeConfig.color}`}>
-                          {typeConfig.icon} {typeConfig.label}
-                        </span>
-                        
-                        {/* Badge de Prioridade se for alta */}
-                        {isHighPriority && (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold bg-red-50 text-red-700 border border-red-100">
-                            🔥 Alta Prioridade
-                          </span>
-                        )}
-                        
-                        <span className="text-xs text-gray-400 font-medium">
-                          {formatDateTime(comunicado.published_at)}
-                        </span>
-                      </div>
-                      
-                      <h3 className={`text-lg md:text-xl font-bold text-gray-900 ${!comunicado.is_read ? 'text-purple-900' : ''}`}>
-                        {comunicado.title}
-                      </h3>
-                    </div>
-                  </div>
-
-                  {/* Conteúdo */}
-                  <div className="prose prose-sm max-w-none text-gray-700 mb-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
-                    <p className="leading-relaxed whitespace-pre-line">
-                      {comunicado.content}
-                    </p>
-                  </div>
-
-                  {/* Rodapé do Card */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 border-t border-gray-100">
-                    <div className="flex items-center gap-3 text-xs sm:text-sm text-gray-500">
-                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-base">
-                        {comunicado.author?.role === 'sindico' ? '👑' : '👤'}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">
-                          {comunicado.author?.full_name || 'Administração'}
-                        </p>
-                        <p className="text-xs text-gray-400 capitalize">
-                          {comunicado.author?.role || 'Gestão'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {!comunicado.is_read ? (
-                      <button
-                        onClick={() => markAsRead(comunicado.id)}
-                        className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:shadow-lg hover:scale-[1.02] transition active:scale-95 flex items-center justify-center gap-2"
-                      >
-                        <span>✓</span> Marcar como lido
-                      </button>
-                    ) : (
-                      <span className="flex items-center gap-1.5 text-green-600 text-sm font-semibold bg-green-50 px-3 py-1.5 rounded-full self-start sm:self-auto">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Lido em {formatDateTime(new Date().toISOString())} {/* Simulando data de leitura visual */}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )
-          })}
+      {filteredComunicados.length > 0 ? (
+        <div className="space-y-4">
+          {filteredComunicados.map((comunicado) => (
+            <ComunicadoCard 
+              key={comunicado.id} 
+              comunicado={comunicado} 
+              onMarkRead={markAsRead} 
+            />
+          ))}
         </div>
       ) : (
         <EmptyState
           icon="📭"
           title="Nenhum comunicado"
-          description="Não há avisos ou comunicados no momento. Tudo tranquilo por aqui!"
+          description="Não há avisos para esta categoria no momento."
+          action={{
+            label: 'Ver todos',
+            onClick: () => setSelectedType(null)
+          }}
         />
       )}
     </PageLayout>

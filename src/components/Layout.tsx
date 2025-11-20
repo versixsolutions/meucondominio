@@ -13,7 +13,7 @@ export default function Layout() {
 
   const isActive = (path: string) => location.pathname === path
 
-  // Itens de navegação para DESKTOP (Agora inclui Perfil)
+  // Menu Desktop (Completo)
   const desktopNavItems = [
     { path: '/', label: 'Dashboard', icon: '🏠' },
     { path: '/faq', label: 'FAQ', icon: '❓' },
@@ -21,16 +21,17 @@ export default function Layout() {
     { path: '/votacoes', label: 'Votações', icon: '🗳️', badge: stats.votacoes.ativas },
     { path: '/ocorrencias', label: 'Ocorrências', icon: '🚨', badge: stats.ocorrencias.abertas },
     { path: '/comunicados', label: 'Comunicados', icon: '📢', badge: stats.comunicados.nao_lidos },
-    { path: '/perfil', label: 'Perfil', icon: '👤' }, // Adicionado aqui
+    { path: '/perfil', label: 'Perfil', icon: '👤' },
   ]
 
-  // Itens de navegação para MOBILE (5 itens principais para caber na barra)
+  // Menu Mobile (Aumentado para 6 itens para incluir Comunicados)
   const mobileNavItems = [
     { path: '/', label: 'Início', icon: '🏠' },
-    { path: '/faq', label: 'FAQ', icon: '❓' },
+    { path: '/comunicados', label: 'Avisos', icon: '📢', badge: stats.comunicados.nao_lidos }, // Novo Item
     { path: '/despesas', label: 'Despesas', icon: '💰' },
     { path: '/votacoes', label: 'Votações', icon: '🗳️', badge: stats.votacoes.ativas },
-    { path: '/perfil', label: 'Perfil', icon: '👤' }, 
+    { path: '/faq', label: 'FAQ', icon: '❓' },
+    { path: '/perfil', label: 'Perfil', icon: '👤' },
   ]
 
   async function handleLogout() {
@@ -57,7 +58,7 @@ export default function Layout() {
               </div>
               <div>
                 <h1 className="text-lg md:text-xl font-bold tracking-tight leading-tight">
-                  Versix Syn
+                  Versix Meu Condomínio
                 </h1>
                 <p className="text-xs opacity-90 font-medium flex flex-col md:flex-row md:gap-1">
                   <span className="font-bold text-white">
@@ -67,7 +68,7 @@ export default function Layout() {
               </div>
             </Link>
 
-            {/* Desktop Nav - Usa a lista completa com Perfil */}
+            {/* Desktop Nav */}
             <nav className="hidden lg:flex items-center gap-1">
               {desktopNavItems.map((item) => (
                 <Link
@@ -112,27 +113,27 @@ export default function Layout() {
         </div>
       </header>
 
-      {/* Mobile Bottom Nav */}
+      {/* Mobile Bottom Nav - Ajustado para 6 colunas */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 pb-safe safe-area-pb">
-        <div className="grid grid-cols-5 gap-1 p-2">
+        <div className="grid grid-cols-6 gap-1 p-1"> {/* Grid de 6 colunas para acomodar o novo item */}
           {mobileNavItems.map((item) => {
             const active = isActive(item.path)
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className="relative flex flex-col items-center p-2 rounded-lg transition duration-200"
+                className="relative flex flex-col items-center py-2 rounded-lg transition duration-200"
                 style={{ 
                   color: active ? theme.colors.primary.DEFAULT : theme.colors.text.secondary,
                   backgroundColor: active ? theme.colors.primary[50] : 'transparent'
                 }}
               >
                 <span className="text-xl mb-0.5">{item.icon}</span>
-                <span className={`text-[10px] font-medium ${active ? 'font-bold' : ''}`}>
+                <span className={`text-[9px] font-medium truncate w-full text-center ${active ? 'font-bold' : ''}`}>
                   {item.label}
                 </span>
                 {item.badge !== undefined && item.badge > 0 && (
-                  <span className="absolute top-1 right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center border border-white">
+                  <span className="absolute top-1 right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center border border-white">
                     {item.badge > 9 ? '9+' : item.badge}
                   </span>
                 )}
