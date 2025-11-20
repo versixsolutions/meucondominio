@@ -10,8 +10,7 @@ interface Votacao {
   id: string
   title: string
   description: string
-  status: string
-  total_voters: number
+  status: string // 'ativa' ou 'encerrada' (calculado via datas)
   start_date: string
   end_date: string
   created_at: string
@@ -44,6 +43,7 @@ export default function Votacoes() {
 
       const votacoesWithVotes = await Promise.all(
         (votacoesData || []).map(async (votacao) => {
+          // Buscar votos desta votação
           const { data: votosData, error: votosError } = await supabase
             .from('votos')
             .select('vote')
@@ -51,6 +51,7 @@ export default function Votacoes() {
 
           if (votosError) throw votosError
 
+          // Contagem baseada no texto da coluna 'vote'
           const votes = {
             favor: votosData?.filter(v => v.vote === 'favor').length || 0,
             contra: votosData?.filter(v => v.vote === 'contra').length || 0,
@@ -58,17 +59,29 @@ export default function Votacoes() {
             total: votosData?.length || 0,
           }
 
-          const { data: userVoteData } = await supabase
+          // Checar se o usuário atual já votou
+          let userVote = null
+          if (user?.id) {
+             const { data: userVoteData } = await supabase
             .from('votos')
             .select('vote')
             .eq('votacao_id', votacao.id)
-            .eq('user_id', user?.id || '')
-            .single()
+            .eq('user_id', user.id)
+            .maybeSingle()
+            
+            userVote = userVoteData?.vote || null
+          }
+
+          // Determinar status baseado na data
+          const now = new Date()
+          const endDate = new Date(votacao.end_date)
+          const computedStatus = endDate > now ? 'ativa' : 'encerrada'
 
           return {
             ...votacao,
+            status: computedStatus,
             votes,
-            user_vote: userVoteData?.vote || null,
+            user_vote: userVote,
           }
         })
       )
@@ -88,7 +101,7 @@ export default function Votacoes() {
         .insert({
           votacao_id: votacaoId,
           user_id: user?.id,
-          vote: voto,
+          vote: voto, // Envia string conforme novo SQL
         })
 
       if (error) throw error
@@ -128,7 +141,7 @@ export default function Votacoes() {
         </div>
       </div>
 
-      {/* Votações Ativas - IGUAL PROTÓTIPO */}
+      {/* Votações Ativas */}
       {ativas.length > 0 && (
         <div className="mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -136,15 +149,10 @@ export default function Votacoes() {
           </h2>
           <div className="space-y-6">
             {ativas.map((votacao) => {
-              const participation = Math.round((votacao.votes.total / votacao.total_voters) * 100)
-              const favorPercent = votacao.votes.total > 0 ? Math.round((votacao.votes.favor / votacao.votes.total) * 100) : 0
-              const contraPercent = votacao.votes.total > 0 ? Math.round((votacao.votes.contra / votacao.votes.total) * 100) : 0
-              const abstencaoPercent = votacao.votes.total > 0 ? Math.round((votacao.votes.abstencao / votacao.votes.total) * 100) : 0
               const daysLeft = Math.ceil((new Date(votacao.end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
 
               return (
                 <div key={votacao.id} className="bg-white rounded-xl shadow-lg border-2 border-purple-600 overflow-hidden">
-                  {/* Header Banner - IGUAL PROTÓTIPO */}
                   <div className="bg-gradient-to-r from-purple-600 to-blue-600 p-4 text-white">
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-bold">
@@ -160,79 +168,32 @@ export default function Votacoes() {
                     <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-3">{votacao.title}</h3>
                     <p className="text-sm md:text-base text-gray-600 mb-4 leading-relaxed">{votacao.description}</p>
 
-                    {/* Barra de Participação - GRADIENTE IGUAL PROTÓTIPO */}
-                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                      <div className="flex justify-between text-xs md:text-sm mb-2">
-                        <span className="text-gray-600">Participação atual</span>
-                        <span className="font-bold text-gray-900">
-                          {participation}% ({votacao.votes.total} de {votacao.total_voters} moradores)
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
-                        <div 
-                          className="h-2 rounded-full transition-all duration-500"
-                          style={{ 
-                            width: `${participation}%`,
-                            background: 'linear-gradient(90deg, #00A86B 0%, #00724E 100%)'
-                          }}
-                        />
-                      </div>
-
-                      {/* Resultados em Grid - IGUAL PROTÓTIPO */}
-                      <div className="grid grid-cols-3 gap-3 mt-4">
-                        <div className="text-center">
-                          <p className="text-xl md:text-2xl font-bold text-green-600">{favorPercent}%</p>
-                          <p className="text-xs text-gray-600">A Favor ({votacao.votes.favor} votos)</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-xl md:text-2xl font-bold text-red-600">{contraPercent}%</p>
-                          <p className="text-xs text-gray-600">Contra ({votacao.votes.contra} votos)</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-xl md:text-2xl font-bold text-gray-400">{abstencaoPercent}%</p>
-                          <p className="text-xs text-gray-600">Abstenção ({votacao.votes.abstencao} votos)</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Ações de Voto */}
                     {votacao.user_vote ? (
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                         <p className="text-xs md:text-sm text-blue-900 text-center">
-                          <strong>✅ Você já votou!</strong> Seu voto foi registrado em 06/11/2025 às 14:23
+                          <strong>✅ Voto registrado!</strong> Você votou: <span className="uppercase font-bold">{votacao.user_vote}</span>
                         </p>
                       </div>
                     ) : (
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-3 gap-2 md:gap-3">
-                          <button 
-                            onClick={() => votar(votacao.id, 'favor')} 
-                            className="bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition text-xs md:text-base"
-                          >
-                            👍 A Favor
-                          </button>
-                          <button 
-                            onClick={() => votar(votacao.id, 'contra')} 
-                            className="bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700 transition text-xs md:text-base"
-                          >
-                            👎 Contra
-                          </button>
-                          <button 
-                            onClick={() => votar(votacao.id, 'abstencao')} 
-                            className="bg-gray-400 text-white py-3 rounded-lg font-bold hover:bg-gray-500 transition text-xs md:text-base"
-                          >
-                            🤷 Abstenção
-                          </button>
-                        </div>
-                        
-                        <div className="flex gap-3">
-                          <button className="flex-1 bg-primary text-white py-3 rounded-lg font-bold hover:bg-primary-dark transition text-sm">
-                            Ver Detalhes Completos
-                          </button>
-                          <button className="px-6 py-3 border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition text-sm">
-                            Compartilhar
-                          </button>
-                        </div>
+                      <div className="grid grid-cols-3 gap-2 md:gap-3">
+                        <button 
+                          onClick={() => votar(votacao.id, 'favor')} 
+                          className="bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition text-xs md:text-base"
+                        >
+                          👍 A Favor
+                        </button>
+                        <button 
+                          onClick={() => votar(votacao.id, 'contra')} 
+                          className="bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700 transition text-xs md:text-base"
+                        >
+                          👎 Contra
+                        </button>
+                        <button 
+                          onClick={() => votar(votacao.id, 'abstencao')} 
+                          className="bg-gray-400 text-white py-3 rounded-lg font-bold hover:bg-gray-500 transition text-xs md:text-base"
+                        >
+                          🤷 Abstenção
+                        </button>
                       </div>
                     )}
                   </div>
@@ -243,7 +204,7 @@ export default function Votacoes() {
         </div>
       )}
 
-      {/* Votações Anteriores - IGUAL PROTÓTIPO */}
+      {/* Votações Anteriores */}
       {encerradas.length > 0 && (
         <div>
           <h2 className="text-xl font-bold text-gray-900 mb-4">Votações Anteriores</h2>
@@ -251,49 +212,34 @@ export default function Votacoes() {
             {encerradas.map((votacao) => {
               const favorPercent = votacao.votes.total > 0 ? Math.round((votacao.votes.favor / votacao.votes.total) * 100) : 0
               const contraPercent = votacao.votes.total > 0 ? Math.round((votacao.votes.contra / votacao.votes.total) * 100) : 0
-              const abstencaoPercent = votacao.votes.total > 0 ? Math.round((votacao.votes.abstencao / votacao.votes.total) * 100) : 0
               const aprovada = favorPercent > 50
-              const participation = Math.round((votacao.votes.total / votacao.total_voters) * 100)
 
               return (
                 <div key={votacao.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <span className={`px-3 py-1 rounded-full text-xs font-bold ${aprovada ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {aprovada ? '✅ APROVADO' : '❌ REJEITADO'}
+                        {aprovada ? '✅ MAIORIA FAVORÁVEL' : '❌ MAIORIA CONTRÁRIA'}
                       </span>
                       <h4 className="font-bold text-gray-900 mt-2 text-base md:text-lg">{votacao.title}</h4>
                       <p className="text-sm text-gray-500 mt-1">Encerrada em {formatDate(votacao.end_date)}</p>
                     </div>
-                    {aprovada ? (
-                      <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                    ) : (
-                      <svg className="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                      </svg>
-                    )}
                   </div>
 
                   <div className="grid grid-cols-3 gap-2 text-center text-sm mb-3">
                     <div>
-                      <p className="font-bold text-green-600">{favorPercent}%</p>
-                      <p className="text-gray-600 text-xs">A Favor</p>
+                      <p className="font-bold text-green-600">{votacao.votes.favor} votos</p>
+                      <p className="text-gray-600 text-xs">A Favor ({favorPercent}%)</p>
                     </div>
                     <div>
-                      <p className="font-bold text-red-600">{contraPercent}%</p>
-                      <p className="text-gray-600 text-xs">Contra</p>
+                      <p className="font-bold text-red-600">{votacao.votes.contra} votos</p>
+                      <p className="text-gray-600 text-xs">Contra ({contraPercent}%)</p>
                     </div>
                     <div>
-                      <p className="font-bold text-gray-400">{abstencaoPercent}%</p>
+                      <p className="font-bold text-gray-400">{votacao.votes.abstencao} votos</p>
                       <p className="text-gray-600 text-xs">Abstenção</p>
                     </div>
                   </div>
-
-                  <p className="text-sm text-gray-600">
-                    Participação: {participation}% • {aprovada ? 'Quórum atingido ✅' : 'Não atingiu maioria necessária'}
-                  </p>
                 </div>
               )
             })}

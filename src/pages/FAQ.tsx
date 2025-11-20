@@ -9,16 +9,25 @@ interface FAQ {
   category: string
   question: string
   answer: string
-  votes_helpful: number
-  votes_not_helpful: number
+  votes_helpful: number | null
+  votes_not_helpful: number | null
 }
 
 const CATEGORIES = {
-  geral: { label: 'Geral', icon: '📋', color: 'blue' },
-  regras: { label: 'Regras', icon: '📜', color: 'purple' },
-  manutencao: { label: 'Manutenção', icon: '🔧', color: 'orange' },
-  financeiro: { label: 'Financeiro', icon: '💰', color: 'green' },
-  areas_comuns: { label: 'Áreas Comuns', icon: '🏊', color: 'cyan' },
+  'Geral': { label: 'Geral', icon: '📋', color: 'blue' },
+  'Convivência': { label: 'Convivência', icon: '🤝', color: 'purple' },
+  'Limpeza': { label: 'Limpeza', icon: '✨', color: 'green' },
+  'Lazer': { label: 'Lazer', icon: '⚽', color: 'orange' },
+  'Eventos': { label: 'Eventos', icon: '🎉', color: 'pink' },
+  'Piscina': { label: 'Piscina', icon: '🏊', color: 'cyan' },
+  'Esportes': { label: 'Esportes', icon: '🏟️', color: 'emerald' },
+  'Pets': { label: 'Pets', icon: '🐾', color: 'yellow' },
+  'Garagem': { label: 'Garagem', icon: '🚗', color: 'gray' },
+  'Obras': { label: 'Obras', icon: '🔨', color: 'red' },
+  'Segurança': { label: 'Segurança', icon: '🛡️', color: 'indigo' },
+  'Financeiro': { label: 'Financeiro', icon: '💰', color: 'teal' },
+  'Admin': { label: 'Admin', icon: '⚖️', color: 'slate' },
+  'Assembléia': { label: 'Assembléia', icon: '📢', color: 'violet' }
 }
 
 export default function FAQ() {
@@ -36,7 +45,8 @@ export default function FAQ() {
       const { data, error } = await supabase
         .from('faqs')
         .select('*')
-        .order('votes_helpful', { ascending: false })
+        // Ordenamos pelo ID para manter consistência, ou created_at se existir
+        .order('question', { ascending: true })
 
       if (error) throw error
       setFaqs(data || [])
@@ -52,15 +62,17 @@ export default function FAQ() {
       const faq = faqs.find(f => f.id === faqId)
       if (!faq) return
 
+      const newCount = (faq.votes_helpful || 0) + 1
+
       const { error } = await supabase
         .from('faqs')
-        .update({ votes_helpful: faq.votes_helpful + 1 })
+        .update({ votes_helpful: newCount })
         .eq('id', faqId)
 
       if (error) throw error
 
       setFaqs(prev => prev.map(f => 
-        f.id === faqId ? { ...f, votes_helpful: f.votes_helpful + 1 } : f
+        f.id === faqId ? { ...f, votes_helpful: newCount } : f
       ))
     } catch (error) {
       console.error('Erro ao votar:', error)
@@ -72,15 +84,17 @@ export default function FAQ() {
       const faq = faqs.find(f => f.id === faqId)
       if (!faq) return
 
+      const newCount = (faq.votes_not_helpful || 0) + 1
+
       const { error } = await supabase
         .from('faqs')
-        .update({ votes_not_helpful: faq.votes_not_helpful + 1 })
+        .update({ votes_not_helpful: newCount })
         .eq('id', faqId)
 
       if (error) throw error
 
       setFaqs(prev => prev.map(f => 
-        f.id === faqId ? { ...f, votes_not_helpful: f.votes_not_helpful + 1 } : f
+        f.id === faqId ? { ...f, votes_not_helpful: newCount } : f
       ))
     } catch (error) {
       console.error('Erro ao votar:', error)
@@ -108,7 +122,7 @@ export default function FAQ() {
       subtitle="Encontre respostas rápidas para suas dúvidas"
       icon="❓"
     >
-      {/* Search - IGUAL PROTÓTIPO */}
+      {/* Search */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6 sticky top-24 z-30">
         <div className="relative">
           <input
@@ -122,9 +136,6 @@ export default function FAQ() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
-        <p className="text-xs text-gray-500 mt-2">
-          <strong>{filteredFAQs.length} perguntas</strong> foram respondidas automaticamente este mês 🎉
-        </p>
       </div>
 
       {/* Category Filter */}
@@ -139,25 +150,29 @@ export default function FAQ() {
         >
           Todas
         </button>
-        {Object.entries(CATEGORIES).map(([key, cat]) => (
-          <button
-            key={key}
-            onClick={() => setSelectedCategory(key)}
-            className={`px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition ${
-              selectedCategory === key
-                ? 'bg-primary text-white'
-                : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
-            }`}
-          >
-            {cat.icon} {cat.label}
-          </button>
-        ))}
+        {Object.keys(groupedFAQs).map((catKey) => {
+          // Tenta pegar a config, senão usa um padrão
+          const catConfig = CATEGORIES[catKey as keyof typeof CATEGORIES] || { label: catKey, icon: '📁' }
+          return (
+            <button
+              key={catKey}
+              onClick={() => setSelectedCategory(catKey)}
+              className={`px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition ${
+                selectedCategory === catKey
+                  ? 'bg-primary text-white'
+                  : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              {catConfig.icon} {catKey}
+            </button>
+          )
+        })}
       </div>
 
-      {/* FAQ List - IGUAL PROTÓTIPO */}
+      {/* FAQ List */}
       {Object.keys(groupedFAQs).length > 0 ? (
         Object.entries(groupedFAQs).map(([category, categoryFAQs]) => {
-          const catInfo = CATEGORIES[category as keyof typeof CATEGORIES]
+          const catInfo = CATEGORIES[category as keyof typeof CATEGORIES] || { label: category, icon: '📁' }
           return (
             <div key={category} className="mb-8">
               <div className="flex items-center gap-3 mb-4">
@@ -165,7 +180,7 @@ export default function FAQ() {
                   <span className="text-2xl">{catInfo.icon}</span>
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">{catInfo.label}</h2>
+                  <h2 className="text-xl font-bold text-gray-900">{category}</h2>
                   <p className="text-sm text-gray-500">{categoryFAQs.length} perguntas</p>
                 </div>
               </div>
@@ -180,11 +195,10 @@ export default function FAQ() {
                       <h3 className="font-bold text-gray-900 mb-3 text-base md:text-lg">
                         {faq.question}
                       </h3>
-                      <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                      <p className="text-sm text-gray-600 mb-4 leading-relaxed whitespace-pre-line">
                         {faq.answer}
                       </p>
                       
-                      {/* Votos - DESTAQUE COMO PROTÓTIPO */}
                       <div className="flex items-center gap-4 pt-3 border-t border-gray-100">
                         <button
                           onClick={() => voteHelpful(faq.id)}
@@ -192,7 +206,7 @@ export default function FAQ() {
                         >
                           <span className="text-lg group-hover:scale-125 transition">👍</span>
                           <span className="text-sm font-semibold">
-                            Útil ({faq.votes_helpful})
+                            Útil ({faq.votes_helpful || 0})
                           </span>
                         </button>
                         <button
@@ -201,7 +215,7 @@ export default function FAQ() {
                         >
                           <span className="text-lg group-hover:scale-125 transition">👎</span>
                           <span className="text-sm">
-                            Não útil ({faq.votes_not_helpful})
+                            Não útil ({faq.votes_not_helpful || 0})
                           </span>
                         </button>
                       </div>
@@ -226,24 +240,6 @@ export default function FAQ() {
           }}
         />
       )}
-
-      {/* CTA Chatbot - IGUAL PROTÓTIPO */}
-      <div className="mt-8 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl p-6 text-white">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="text-2xl">💬</span>
-          </div>
-          <div className="flex-1">
-            <h3 className="font-bold text-lg mb-2">Não encontrou sua resposta?</h3>
-            <p className="text-purple-100 text-sm mb-4">
-              Pergunte ao assistente virtual ou direto ao síndico!
-            </p>
-            <button className="bg-white text-purple-600 px-6 py-2 rounded-lg font-semibold hover:bg-purple-50 transition">
-              Fazer Pergunta
-            </button>
-          </div>
-        </div>
-      </div>
     </PageLayout>
   )
 }
