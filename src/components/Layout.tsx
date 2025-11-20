@@ -13,24 +13,21 @@ export default function Layout() {
 
   const isActive = (path: string) => location.pathname === path
 
-  // Menu Desktop (Completo)
+  // Menu Desktop (Visão completa com submenu implícito)
   const desktopNavItems = [
     { path: '/', label: 'Dashboard', icon: '🏠' },
-    { path: '/faq', label: 'FAQ', icon: '❓' },
-    { path: '/despesas', label: 'Despesas', icon: '💰' },
-    { path: '/votacoes', label: 'Votações', icon: '🗳️', badge: stats.votacoes.ativas },
-    { path: '/ocorrencias', label: 'Ocorrências', icon: '🚨', badge: stats.ocorrencias.abertas },
-    { path: '/comunicados', label: 'Comunicados', icon: '📢', badge: stats.comunicados.nao_lidos },
+    { path: '/comunicacao', label: 'Comunicação', icon: '📢' },
+    { path: '/suporte', label: 'Suporte', icon: '🤝' },
+    { path: '/transparencia', label: 'Transparência', icon: '⚖️' },
     { path: '/perfil', label: 'Perfil', icon: '👤' },
   ]
 
-  // Menu Mobile (Aumentado para 6 itens para incluir Comunicados)
+  // Menu Mobile (Estrutura 5 itens exatos)
   const mobileNavItems = [
     { path: '/', label: 'Início', icon: '🏠' },
-    { path: '/comunicados', label: 'Avisos', icon: '📢', badge: stats.comunicados.nao_lidos }, // Novo Item
-    { path: '/despesas', label: 'Despesas', icon: '💰' },
-    { path: '/votacoes', label: 'Votações', icon: '🗳️', badge: stats.votacoes.ativas },
-    { path: '/faq', label: 'FAQ', icon: '❓' },
+    { path: '/comunicacao', label: 'Comunicação', icon: '📢' },
+    { path: '/suporte', label: 'Suporte', icon: '🤝' },
+    { path: '/transparencia', label: 'Transparência', icon: '⚖️' },
     { path: '/perfil', label: 'Perfil', icon: '👤' },
   ]
 
@@ -74,7 +71,7 @@ export default function Layout() {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`relative px-3 py-2 rounded-lg font-medium text-sm transition duration-200 flex items-center gap-2 ${
+                  className={`relative px-4 py-2 rounded-lg font-medium text-sm transition duration-200 flex items-center gap-2 ${
                     isActive(item.path) 
                       ? 'bg-white/20 text-white shadow-inner' 
                       : 'hover:bg-white/10 text-white/90'
@@ -82,11 +79,6 @@ export default function Layout() {
                 >
                   <span>{item.icon}</span>
                   {item.label}
-                  {item.badge !== undefined && item.badge > 0 && (
-                    <span className="bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-sm animate-pulse">
-                      {item.badge}
-                    </span>
-                  )}
                 </Link>
               ))}
             </nav>
@@ -113,9 +105,9 @@ export default function Layout() {
         </div>
       </header>
 
-      {/* Mobile Bottom Nav - Ajustado para 6 colunas */}
+      {/* Mobile Bottom Nav - 5 Colunas Exatas */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 pb-safe safe-area-pb">
-        <div className="grid grid-cols-6 gap-1 p-1"> {/* Grid de 6 colunas para acomodar o novo item */}
+        <div className="grid grid-cols-5 gap-1 p-1">
           {mobileNavItems.map((item) => {
             const active = isActive(item.path)
             return (
@@ -132,11 +124,6 @@ export default function Layout() {
                 <span className={`text-[9px] font-medium truncate w-full text-center ${active ? 'font-bold' : ''}`}>
                   {item.label}
                 </span>
-                {item.badge !== undefined && item.badge > 0 && (
-                  <span className="absolute top-1 right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center border border-white">
-                    {item.badge > 9 ? '9+' : item.badge}
-                  </span>
-                )}
               </Link>
             )
           })}

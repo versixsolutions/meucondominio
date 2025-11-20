@@ -7,11 +7,14 @@ import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
 import FAQ from './pages/FAQ'
-import Despesas from './pages/Despesas'
+import Despesas from './pages/Despesas' // Agora "Transparência"
 import Votacoes from './pages/Votacoes'
 import Ocorrencias from './pages/Ocorrencias'
 import Comunicados from './pages/Comunicados'
-import Profile from './pages/Profile' // Importação Nova
+import Profile from './pages/Profile'
+import Suporte from './pages/Suporte' // Novo
+import Comunicacao from './pages/Comunicacao' // Novo
+import Biblioteca from './pages/Biblioteca' // Novo
 import Layout from './components/Layout'
 
 // Componente de Rota Privada
@@ -40,12 +43,23 @@ export default function App() {
             {/* Rotas Privadas com Layout */}
             <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
               <Route path="/" element={<Dashboard />} />
+              
+              {/* Novos Módulos Hubs */}
+              <Route path="/suporte" element={<Suporte />} />
+              <Route path="/comunicacao" element={<Comunicacao />} />
+              <Route path="/transparencia" element={<Despesas />} /> {/* Renomeado na UI */}
+              <Route path="/perfil" element={<Profile />} />
+
+              {/* Sub-rotas (ainda acessíveis diretamente ou via Hubs) */}
               <Route path="/faq" element={<FAQ />} />
-              <Route path="/despesas" element={<Despesas />} />
-              <Route path="/votacoes" element={<Votacoes />} />
               <Route path="/ocorrencias" element={<Ocorrencias />} />
+              <Route path="/biblioteca" element={<Biblioteca />} />
+              
               <Route path="/comunicados" element={<Comunicados />} />
-              <Route path="/perfil" element={<Profile />} /> {/* Rota Nova */}
+              <Route path="/votacoes" element={<Votacoes />} />
+              
+              {/* Rota legado para compatibilidade */}
+              <Route path="/despesas" element={<Navigate to="/transparencia" replace />} />
             </Route>
           </Routes>
         </ThemeProvider>
