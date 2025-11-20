@@ -181,11 +181,29 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Cards */}
+      {/* Ajuste no grid: md:grid-cols-5 para acomodar 5 cards em uma linha */}
       <div className="
         flex flex-nowrap overflow-x-auto snap-x snap-mandatory gap-4 pb-4 mb-6
-        md:grid md:grid-cols-4 md:overflow-visible md:pb-0 md:snap-none
+        md:grid md:grid-cols-5 md:overflow-visible md:pb-0 md:snap-none
         scrollbar-hide
       ">
+        
+        {/* NOVO CARD: Comunicados (1ª Posição) */}
+        <div onClick={() => navigate('/comunicados')} className="min-w-[260px] snap-center bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-lg cursor-pointer transition-transform hover:-translate-y-1 relative overflow-hidden">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-4xl">📢</div>
+            {stats.comunicados.nao_lidos > 0 && (
+              <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full animate-pulse">
+                NOVO
+              </span>
+            )}
+          </div>
+          <h3 className="text-base font-bold text-gray-900 mb-1">Comunicados</h3>
+          <p className="text-3xl font-bold text-purple-600 mb-1">{stats.comunicados.nao_lidos}</p>
+          <p className="text-xs text-gray-500">não lidos</p>
+        </div>
+
+        {/* FAQ (2ª Posição) */}
         <div onClick={() => navigate('/faq')} className="min-w-[260px] snap-center bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-lg cursor-pointer transition-transform hover:-translate-y-1">
           <div className="flex items-center justify-between mb-3">
             <div className="text-4xl">❓</div>
@@ -195,18 +213,19 @@ export default function Dashboard() {
           <p className="text-xs text-gray-500">perguntas respondidas</p>
         </div>
 
+        {/* Despesas (3ª Posição) */}
         <div onClick={() => navigate('/despesas')} className="min-w-[260px] snap-center bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-lg cursor-pointer transition-transform hover:-translate-y-1">
           <div className="flex items-center justify-between mb-3">
             <div className="text-4xl">💰</div>
           </div>
           <h3 className="text-base font-bold text-gray-900 mb-1">Despesas</h3>
           <p className="text-2xl font-bold text-green-600 mb-1">{formatCurrency(stats.despesas.totalMes)}</p>
-          {/* CORREÇÃO AQUI: Texto dinâmico do mês */}
           <p className="text-xs text-gray-500">
             {stats.despesas.count} lançamentos em {stats.despesas.monthLabel}
           </p>
         </div>
 
+        {/* Votações (4ª Posição) */}
         <div onClick={() => navigate('/votacoes')} className="min-w-[260px] snap-center bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-lg cursor-pointer relative transition-transform hover:-translate-y-1">
           <div className="flex items-center justify-between mb-3">
             <div className="text-4xl">🗳️</div>
@@ -223,6 +242,7 @@ export default function Dashboard() {
           </p>
         </div>
 
+        {/* Ocorrências (5ª Posição) */}
         <div onClick={() => navigate('/ocorrencias')} className="min-w-[260px] snap-center bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-lg cursor-pointer transition-transform hover:-translate-y-1">
           <div className="flex items-center justify-between mb-3">
             <div className="text-4xl">🚨</div>
