@@ -18,7 +18,8 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Olá! Sou o assistente virtual do Pinheiro Park. 🤖\nDigite sua dúvida (ex: "horário piscina", "barulho", "mudança") e eu buscarei no Regimento para você!',
+      // Saudação reformulada para orientar o uso por palavras-chave
+      text: 'Olá! Sou o Chatbot do Pinheiro Park. 🤖\n\nMeu sistema funciona por **palavras-chave**. Para agilizar sua busca, digite apenas o termo principal (ex: "piscina", "obras", "mudança") em vez de frases longas.',
       sender: 'bot',
       timestamp: new Date()
     }
@@ -52,10 +53,9 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
     setIsTyping(true)
 
     try {
-      // --- LÓGICA DE BUSCA SEM CUSTO (KEYWORD SEARCH) ---
-      // Busca nas FAQs e nos Documentos por palavras-chave
+      // --- LÓGICA DE BUSCA (KEYWORD SEARCH) ---
       
-      // 1. Busca em FAQs (Perguntas prontas)
+      // 1. Busca em FAQs
       const { data: faqData } = await supabase
         .from('faqs')
         .select('question, answer')
@@ -67,8 +67,7 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
       if (faqData && faqData.length > 0) {
         botResponse = `Encontrei isso no FAQ:\n\n${faqData[0].answer}`
       } else {
-        // 2. Se não achar no FAQ, busca nos Documentos (Regimento) via busca de texto simples
-        // (Isso requer que você tenha rodado o seed, mas busca por texto ao invés de vetor para ser grátis)
+        // 2. Busca nos Documentos (Regimento)
         const { data: docData } = await supabase
           .from('documents')
           .select('content')
@@ -78,8 +77,8 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
         if (docData && docData.length > 0) {
           botResponse = `De acordo com o Regimento:\n\n"${docData[0].content}"`
         } else {
-          // 3. Fallback genérico
-          botResponse = 'Desculpe, não encontrei essa informação específica nos documentos. Tente usar palavras-chave mais simples (ex: "Lixo", "Reforma") ou contate a administração.'
+          // 3. Fallback
+          botResponse = 'Não encontrei resultados para esse termo exato. Tente usar uma palavra-chave mais simples ou verifique a grafia.'
         }
       }
 
@@ -111,9 +110,11 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
             🤖
           </div>
           <div>
-            <h3 className="font-bold text-sm">IA Pinheiro Park</h3>
+            {/* Título Alterado */}
+            <h3 className="font-bold text-sm">Chatbot Pinheiro Park</h3>
+            {/* Status simplificado (sem menção a gratuito) */}
             <p className="text-[10px] opacity-90 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span> Online (Modo Gratuito)
+              <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span> Online
             </p>
           </div>
         </div>
@@ -168,7 +169,7 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder="Ex: Pode cachorro?"
+          placeholder="Digite uma palavra-chave..."
           className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
         />
         <button
