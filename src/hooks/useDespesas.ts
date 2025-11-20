@@ -1,71 +1,48 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Despesa, DespesasStats } from '../types'
+import type { Despesa } from '../types'
 
-export function useDespesas(categoryFilter?: string) {
+export function useDespesas() {
   const [despesas, setDespesas] = useState<Despesa[]>([])
-  const [stats, setStats] = useState<DespesasStats>({
-    total: 0,
-    count: 0,
-    biggestCategory: '',
-    biggestAmount: 0,
-    comparisonPrevMonth: 0,
-  })
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadDespesas()
-  }, [categoryFilter])
+  }, [])
 
   async function loadDespesas() {
     try {
       setLoading(true)
       setError(null)
 
-      // Query base
-      let query = supabase
+      // Ajustado para o Schema Real:
+      // - description (ao invés de title)
+      // - category (texto simples)
+      const { data, error: queryError } = await supabase
         .from('despesas')
         .select(`
-          *,
-          category:despesa_categories(*)
+          id,
+          description,
+          amount,
+          due_date,
+          paid_at,
+          category,
+          created_at,
+          author_id
         `)
-        .order('payment_date', { ascending: false })
-
-      // Filtrar por categoria se especificado
-      if (categoryFilter && categoryFilter !== 'all') {
-        query = query.eq('category_id', categoryFilter)
-      }
-
-      const { data, error: queryError } = await query
+        .order('due_date', { ascending: false })
 
       if (queryError) throw queryError
 
       setDespesas(data || [])
-
-      // Calcular stats
-      if (data && data.length > 0) {
-        const total = data.reduce((sum, d) => sum + Number(d.amount), 0)
-        
-        // Maior despesa
-        const biggest = data.reduce((max, d) => 
-          Number(d.amount) > Number(max.amount) ? d : max
-        )
-
-        setStats({
-          total,
-          count: data.length,
-          biggestCategory: biggest.category?.name || 'Outros',
-          biggestAmount: Number(biggest.amount),
-          comparisonPrevMonth: 12, // TODO: calcular real
-        })
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Erro desconhecido'))
+    } catch (err: any) {
+      console.error('Erro ao carregar despesas:', err)
+      setError(err.message || 'Erro ao carregar dados')
     } finally {
       setLoading(false)
     }
   }
 
-  return { despesas, stats, loading, error, reload: loadDespesas }
+  return { despesas, loading, error, reload: loadDespesas }
 }
