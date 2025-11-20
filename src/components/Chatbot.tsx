@@ -18,8 +18,7 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      // Saudação reformulada para orientar o uso por palavras-chave
-      text: 'Olá! Sou o Chatbot do Pinheiro Park. 🤖\n\nMeu sistema funciona por **palavras-chave**. Para agilizar sua busca, digite apenas o termo principal (ex: "piscina", "obras", "mudança") em vez de frases longas.',
+      text: 'Olá! Sou o Chatbot do Pinheiro Park. 🤖\n\nMeu sistema funciona por **palavras-chave**. Para agilizar sua busca, digite apenas o termo principal (ex: "piscina", "obras", "mudança").',
       sender: 'bot',
       timestamp: new Date()
     }
@@ -28,7 +27,6 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Auto-scroll
   useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -53,9 +51,7 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
     setIsTyping(true)
 
     try {
-      // --- LÓGICA DE BUSCA (KEYWORD SEARCH) ---
-      
-      // 1. Busca em FAQs
+      // 1. Busca em FAQs (Já formatadas com Sim/Não e Fonte pelo SQL)
       const { data: faqData } = await supabase
         .from('faqs')
         .select('question, answer')
@@ -65,20 +61,25 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
       let botResponse = ''
 
       if (faqData && faqData.length > 0) {
-        botResponse = `Encontrei isso no FAQ:\n\n${faqData[0].answer}`
+        botResponse = `Encontrei um artigo relacionado:\n\n${faqData[0].answer}`
       } else {
-        // 2. Busca nos Documentos (Regimento)
+        // 2. Busca nos Documentos (Regimento/Convenção)
+        // Agora buscamos também o METADATA para citar a fonte corretamente
         const { data: docData } = await supabase
           .from('documents')
-          .select('content')
+          .select('content, metadata')
           .ilike('content', `%${userText}%`)
           .limit(1)
 
         if (docData && docData.length > 0) {
-          botResponse = `De acordo com o Regimento:\n\n"${docData[0].content}"`
+          // Formatação automática da resposta encontrada no documento
+          const content = docData[0].content
+          const source = docData[0].metadata?.source || 'Regimento Interno'
+          const title = docData[0].metadata?.title || 'Norma'
+
+          botResponse = `Localizei este trecho nos documentos oficiais:\n\n"${content}"\n\n📄 **Fonte:** ${source} - ${title}`
         } else {
-          // 3. Fallback
-          botResponse = 'Não encontrei resultados para esse termo exato. Tente usar uma palavra-chave mais simples ou verifique a grafia.'
+          botResponse = 'Não encontrei resultados exatos para esse termo nos documentos. Tente usar uma palavra-chave mais simples (ex: "Lixo", "Reforma") ou verifique a grafia.'
         }
       }
 
@@ -110,9 +111,7 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
             🤖
           </div>
           <div>
-            {/* Título Alterado */}
             <h3 className="font-bold text-sm">Chatbot Pinheiro Park</h3>
-            {/* Status simplificado (sem menção a gratuito) */}
             <p className="text-[10px] opacity-90 flex items-center gap-1">
               <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span> Online
             </p>
@@ -153,7 +152,7 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
         {isTyping && (
           <div className="flex justify-start">
             <div className="bg-white border border-gray-200 p-3 rounded-2xl rounded-bl-none flex gap-1 items-center">
-              <span className="text-xs text-gray-400 mr-2">Buscando</span>
+              <span className="text-xs text-gray-400 mr-2">Consultando Regimento</span>
               <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></span>
               <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-100"></span>
               <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-200"></span>
@@ -169,7 +168,7 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder="Digite uma palavra-chave..."
+          placeholder="Digite um termo (ex: piscina)..."
           className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
         />
         <button
