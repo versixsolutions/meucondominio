@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext' // Importar Auth
 import { extractTextFromPDF } from '../lib/pdfUtils'
 import PageLayout from '../components/PageLayout'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -24,33 +25,37 @@ interface Documento {
     title: string
     source: string
     url?: string
-    category?: string // Nova propriedade
+    category?: string
   }
   created_at: string
 }
 
 export default function Biblioteca() {
+  const { profile } = useAuth() // Pegar perfil para saber o condomínio
   const [docs, setDocs] = useState<Documento[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null)
   
-  // Estados do Modal de Upload
+  // Estados do Modal
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [uploadCategory, setUploadCategory] = useState('atas')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    loadDocs()
-  }, [])
+    if (profile?.condominio_id) {
+      loadDocs()
+    }
+  }, [profile?.condominio_id])
 
   async function loadDocs() {
     try {
       const { data, error } = await supabase
         .from('documents')
         .select('*')
+        .eq('condominio_id', profile?.condominio_id) // Filtrar apenas do meu condomínio
         .order('id', { ascending: false })
 
       if (error) throw error
@@ -62,7 +67,6 @@ export default function Biblioteca() {
     }
   }
 
-  // 1. Selecionar Arquivo
   const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
@@ -74,20 +78,18 @@ export default function Biblioteca() {
     }
   }
 
-  // 2. Processar e Salvar (Upload)
   const handleUpload = async () => {
-    if (!selectedFile) return
+    if (!selectedFile || !profile?.condominio_id) return
 
     setUploading(true)
     try {
       const categoryLabel = CATEGORIAS_DOCS.find(c => c.id === uploadCategory)?.label || 'Documento'
 
-      // Extrair texto para a IA
       console.log('Lendo PDF...')
       const textContent = await extractTextFromPDF(selectedFile)
       
-      // Upload físico no Storage
-      const fileName = `${Date.now()}_${selectedFile.name}`
+      // Upload físico no Storage (Pasta por condomínio para organização)
+      const fileName = `${profile.condominio_id}/${Date.now()}_${selectedFile.name}`
       const { error: uploadError } = await supabase.storage
         .from('biblioteca')
         .upload(fileName, selectedFile)
@@ -98,16 +100,16 @@ export default function Biblioteca() {
         .from('biblioteca')
         .getPublicUrl(fileName)
 
-      // Salvar no Banco (Com Categoria e Tags Automáticas)
+      // Salvar no Banco (Com vínculo ao condomínio)
       const { error: dbError } = await supabase.from('documents').insert({
         title: selectedFile.name.replace('.pdf', ''),
         content: textContent,
-        // Tags inteligentes: Categoria + termos comuns para ajudar a busca
         tags: `${categoryLabel.toLowerCase()} ${uploadCategory} pdf documento oficial`,
+        condominio_id: profile.condominio_id, // <--- VÍNCULO IMPORTANTE
         metadata: {
           title: selectedFile.name,
-          source: categoryLabel, // Usa o nome bonito da categoria como fonte
-          category: uploadCategory, // ID da categoria para filtros
+          source: categoryLabel,
+          category: uploadCategory,
           url: publicUrl
         }
       })
@@ -127,7 +129,6 @@ export default function Biblioteca() {
     }
   }
 
-  // Filtragem
   const filteredDocs = docs.filter(d => {
     const matchesSearch = d.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           d.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -144,12 +145,15 @@ export default function Biblioteca() {
       subtitle="Acervo de documentos oficiais do condomínio" 
       icon="📚"
       headerAction={
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg font-bold hover:bg-white/30 transition text-sm flex items-center gap-2 border border-white/30"
-        >
-          <span className="text-lg">+</span> Novo Documento
-        </button>
+        // Apenas síndico ou admin pode subir arquivos (regra de UI)
+        (profile?.role === 'sindico' || profile?.role === 'admin') ? (
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg font-bold hover:bg-white/30 transition text-sm flex items-center gap-2 border border-white/30"
+          >
+            <span className="text-lg">+</span> Novo Documento
+          </button>
+        ) : null
       }
     >
       {/* Barra de Busca e Filtros */}
@@ -165,7 +169,6 @@ export default function Biblioteca() {
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         </div>
 
-        {/* Filtros Rápidos */}
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           <button 
             onClick={() => setSelectedFilter(null)}
@@ -189,7 +192,7 @@ export default function Biblioteca() {
       {filteredDocs.length > 0 ? (
         <div className="grid gap-4">
           {filteredDocs.map((doc) => {
-            const category = CATEGORIAS_DOCS.find(c => c.id === doc.metadata?.category) || CATEGORIAS_DOCS[6] // Default Outros
+            const category = CATEGORIAS_DOCS.find(c => c.id === doc.metadata?.category) || CATEGORIAS_DOCS[6]
             
             return (
               <div key={doc.id} className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 hover:border-primary transition group relative overflow-hidden">
@@ -217,7 +220,6 @@ export default function Biblioteca() {
                   {doc.title || doc.metadata?.title}
                 </h3>
                 
-                {/* Preview do Conteúdo (Trecho) */}
                 <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 h-20 overflow-hidden relative group-hover:bg-blue-50/30 transition-colors">
                   <p className="text-xs text-gray-500 leading-relaxed font-mono break-words">
                     {doc.content.slice(0, 300)}...
@@ -256,7 +258,6 @@ export default function Biblioteca() {
               </div>
 
               <div className="space-y-4">
-                {/* Seleção de Categoria */}
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">Categoria</label>
                   <div className="grid grid-cols-2 gap-2">
@@ -277,7 +278,6 @@ export default function Biblioteca() {
                   </div>
                 </div>
 
-                {/* Seleção de Arquivo */}
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">Arquivo PDF</label>
                   <input 
@@ -317,10 +317,10 @@ export default function Biblioteca() {
                   {uploading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Processando e Indexando...
+                      Processando...
                     </>
                   ) : (
-                    'Enviar e Indexar na IA'
+                    'Enviar e Indexar'
                   )}
                 </button>
               </div>
