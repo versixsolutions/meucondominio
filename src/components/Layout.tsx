@@ -10,35 +10,28 @@ interface NavItem {
   label: string
   icon: string
   badge?: number
-  adminOnly?: boolean // Propriedade para controle de acesso
+  adminOnly?: boolean
 }
 
 export default function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
   
-  // Pegamos 'canManage' para verificar se é Admin/Síndico
-  const { profile, signOut, canManage } = useAuth()
+  const { profile, signOut, canManage } = useAuth() // Usamos canManage para verificar permissão
   const { stats } = useDashboardStats()
   const { theme, loading } = useTheme()
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const isActive = (path: string) => location.pathname === path
 
-  // MENU DESKTOP
-  // Adicionamos a propriedade adminOnly onde necessário
   const desktopNavItems: NavItem[] = [
     { path: '/', label: 'Dashboard', icon: '🏠' },
     { path: '/comunicacao', label: 'Comunicação', icon: '📢' },
     { path: '/suporte', label: 'Suporte', icon: '🤝' },
     { path: '/transparencia', label: 'Transparência', icon: '💰' },
     { path: '/perfil', label: 'Perfil', icon: '👤' },
-    
-    // Exemplo de Rota Futura (Só aparece para Síndico/Admin)
-    // { path: '/admin', label: 'Painel do Síndico', icon: '⚙️', adminOnly: true },
   ]
 
-  // MENU MOBILE
   const mobileNavItems: NavItem[] = [
     { path: '/', label: 'Início', icon: '🏠' },
     { path: '/comunicacao', label: 'Comunicação', icon: '📢' },
@@ -47,8 +40,6 @@ export default function Layout() {
     { path: '/perfil', label: 'Perfil', icon: '👤' },
   ]
 
-  // Filtros de Segurança
-  // Se o item for adminOnly, só mostra se canManage for true
   const visibleDesktopItems = desktopNavItems.filter(item => !item.adminOnly || canManage)
   const visibleMobileItems = mobileNavItems.filter(item => !item.adminOnly || canManage)
 
@@ -71,7 +62,6 @@ export default function Layout() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              {/* Botão Menu Hambúrguer (Desktop Sidebar) */}
               <button 
                 onClick={() => setIsSidebarOpen(true)}
                 className="hidden md:flex p-2 rounded-lg hover:bg-white/20 transition"
@@ -90,23 +80,35 @@ export default function Layout() {
                 />
                 <div>
                   <h1 className="text-lg md:text-xl font-bold tracking-tight leading-tight">
-                    Versix Meu Condomínio
+                    {profile?.condominio_name || 'Versix Syn'}
                   </h1>
-                  <p className="text-xs opacity-90 font-medium flex flex-col md:flex-row md:gap-1">
-                    <span className="font-bold text-white">
-                      {profile?.condominio_name || 'Carregando...'}
+                  {/* Badge de Administrador no Título (Mobile/Desktop) */}
+                  {canManage && (
+                    <span className="bg-white/20 text-[10px] font-bold uppercase px-2 py-0.5 rounded border border-white/30 inline-block">
+                      {profile?.role === 'admin' ? 'Super Admin' : 'Gestor'}
                     </span>
-                  </p>
+                  )}
                 </div>
               </Link>
             </div>
 
             {/* User Menu Desktop */}
             <div className="hidden md:flex items-center gap-3">
+              
+              {/* BOTÃO DE ACESSO AO PAINEL ADMIN (Desktop) */}
+              {canManage && (
+                <Link 
+                  to="/admin" 
+                  className="bg-white text-primary px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-100 transition shadow-sm flex items-center gap-2 mr-2 animate-fade-in"
+                >
+                  <span>⚙️</span> Painel Admin
+                </Link>
+              )}
+
               <Link to="/perfil" className="text-right hover:opacity-80 transition">
                 <p className="text-sm font-bold leading-tight">{profile?.full_name?.split(' ')[0]}</p>
                 <p className="text-[10px] uppercase tracking-wider opacity-80 font-semibold">
-                  {profile?.role === 'sindico' ? '👑 Síndico' : '🏠 Morador'}
+                  Unid: {profile?.unit_number || '-'}
                 </p>
               </Link>
               <button
@@ -123,7 +125,7 @@ export default function Layout() {
         </div>
       </header>
 
-      {/* SIDEBAR (Drawer) - Apenas Desktop */}
+      {/* SIDEBAR (Drawer) - Desktop */}
       <div 
         className={`fixed inset-0 bg-black/50 z-50 transition-opacity duration-300 md:block hidden ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={() => setIsSidebarOpen(false)}
@@ -142,8 +144,20 @@ export default function Layout() {
             </button>
           </div>
 
+          {/* Botão Admin dentro do menu lateral também */}
+          {canManage && (
+            <div className="mb-4">
+              <Link 
+                to="/admin"
+                onClick={() => setIsSidebarOpen(false)}
+                className="w-full bg-gradient-to-r from-slate-800 to-slate-900 text-white px-4 py-3 rounded-xl text-sm font-bold shadow-md flex items-center justify-center gap-2 hover:shadow-lg transition transform hover:scale-[1.02]"
+              >
+                <span>⚙️</span> Acessar Painel Admin
+              </Link>
+            </div>
+          )}
+
           <nav className="flex-1 space-y-2">
-            {/* Renderiza apenas itens permitidos */}
             {visibleDesktopItems.map((item) => (
               <Link
                 key={item.path}
@@ -180,8 +194,19 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* Mobile Bottom Nav - Renderiza itens filtrados */}
+      {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 pb-safe safe-area-pb">
+        {/* Botão Flutuante Admin para Mobile (Acima da tab bar) */}
+        {canManage && (
+          <Link 
+            to="/admin" 
+            className="absolute -top-12 right-4 bg-slate-900 text-white p-3 rounded-full shadow-lg flex items-center justify-center hover:bg-slate-800 transition transform hover:scale-110"
+            title="Painel Admin"
+          >
+            ⚙️
+          </Link>
+        )}
+
         <div className={`grid gap-1 p-1 ${visibleMobileItems.length === 5 ? 'grid-cols-5' : 'grid-cols-' + visibleMobileItems.length}`}>
           {visibleMobileItems.map((item) => {
             const active = isActive(item.path)
