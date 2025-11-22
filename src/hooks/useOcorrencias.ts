@@ -14,56 +14,60 @@ export function useOcorrencias(statusFilter?: string) {
   const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
-    loadOcorrencias()
+    loadData()
   }, [statusFilter])
 
-  async function loadOcorrencias() {
+  async function loadData() {
     try {
       setLoading(true)
       setError(null)
 
-      // Query base
+      // 1. Buscar Lista (com filtro se necessário)
       let query = supabase
         .from('ocorrencias')
         .select('*')
         .order('created_at', { ascending: false })
 
-      // Filtrar por status
       if (statusFilter && statusFilter !== 'all') {
         query = query.eq('status', statusFilter)
       }
 
-      const { data, error: queryError } = await query
+      const { data: listData, error: listError } = await query
+      if (listError) throw listError
+      setOcorrencias(listData || [])
 
-      if (queryError) throw queryError
+      // 2. Buscar Estatísticas Otimizadas (Count direto no banco)
+      // Abertas
+      const { count: countAbertas } = await supabase
+        .from('ocorrencias')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'aberto')
 
-      setOcorrencias(data || [])
+      // Em Andamento
+      const { count: countAndamento } = await supabase
+        .from('ocorrencias')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'em_andamento')
 
-            // Otimização: O cálculo de stats deve ser feito no backend (via RPC/Edge Function)
-      // ou, no mínimo, as estatísticas devem ser buscadas separadamente com filtros.
-      // Por enquanto, mantemos o cálculo no frontend, mas com a ressalva de otimização futura.
-      if (data) {
-        const abertas = data.filter(o => o.status === 'aberto').length
-        const em_andamento = data.filter(o => o.status === 'em_andamento').length
-        
-        // Resolvidas este mês: Otimização para usar o filtro de data no Supabase
-        // Para simplificar a refatoração, vamos manter o cálculo no frontend, mas com a ressalva.
-        // A melhoria seria usar: .gte('resolved_at', startOfMonth) e .lte('resolved_at', endOfMonth)
-        const mesAtual = new Date().getMonth()
-        const anoAtual = new Date().getFullYear()
-        const resolvidas_mes = data.filter(o => {
-          if (o.status !== 'resolvido' || !o.resolved_at) return false
-          const resolvedDate = new Date(o.resolved_at)
-          return resolvedDate.getMonth() === mesAtual && resolvedDate.getFullYear() === anoAtual
-        }).length
+      // Resolvidas no Mês Atual
+      const now = new Date()
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
 
-        setStats({
-          abertas,
-          em_andamento,
-          resolvidas_mes,
-          total: data.length,
-        })
-      }
+      const { count: countResolvidas } = await supabase
+        .from('ocorrencias')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'resolvido')
+        .gte('resolved_at', startOfMonth)
+        .lte('resolved_at', endOfMonth)
+
+      setStats({
+        abertas: countAbertas || 0,
+        em_andamento: countAndamento || 0,
+        resolvidas_mes: countResolvidas || 0,
+        total: listData?.length || 0,
+      })
+
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Erro desconhecido'))
     } finally {
@@ -71,5 +75,5 @@ export function useOcorrencias(statusFilter?: string) {
     }
   }
 
-  return { ocorrencias, stats, loading, error, reload: loadOcorrencias }
+  return { ocorrencias, stats, loading, error, reload: loadData }
 }

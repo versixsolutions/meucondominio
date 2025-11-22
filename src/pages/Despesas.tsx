@@ -30,16 +30,8 @@ const CATEGORY_CONFIG: Record<string, any> = {
 function getCategoryStyle(category: string | null) {
   if (!category) return CATEGORY_CONFIG.default
   const normalized = category.toLowerCase()
-  
-  if (normalized.includes('adm')) return CATEGORY_CONFIG['administrativa']
-  if (normalized.includes('pessoal') || normalized.includes('mão de obra')) return CATEGORY_CONFIG['pessoal']
-  if (normalized.includes('serviço')) return CATEGORY_CONFIG['serviços']
-  if (normalized.includes('manut')) return CATEGORY_CONFIG['manutenção']
-  if (normalized.includes('aquisi') || normalized.includes('material')) return CATEGORY_CONFIG['aquisições']
-  if (normalized.includes('imposto') || normalized.includes('inss')) return CATEGORY_CONFIG['impostos']
-  if (normalized.includes('finan') || normalized.includes('bancária')) return CATEGORY_CONFIG['financeira']
-
-  return CATEGORY_CONFIG.default
+  const foundKey = Object.keys(CATEGORY_CONFIG).find(key => normalized.includes(key))
+  return foundKey ? CATEGORY_CONFIG[foundKey] : CATEGORY_CONFIG.default
 }
 
 export default function Despesas() {
@@ -103,19 +95,44 @@ export default function Despesas() {
     })
   }, [despesas, selectedCategory, statusFilter, selectedMonth])
 
+  // --- FUNÇÃO DE EXPORTAÇÃO CSV ---
+  const handleExport = () => {
+    const headers = ['Descrição', 'Categoria', 'Vencimento', 'Valor', 'Status', 'Pago Em']
+    const rows = filteredDespesas.map(d => [
+      `"${d.description}"`,
+      d.category,
+      formatDate(d.due_date),
+      d.amount.toFixed(2).replace('.', ','),
+      d.paid_at ? 'Pago' : 'Pendente',
+      d.paid_at ? formatDate(d.paid_at) : '-'
+    ])
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + headers.join(",") + "\n" 
+      + rows.map(e => e.join(",")).join("\n")
+
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement("a")
+    link.setAttribute("href", encodedUri)
+    link.setAttribute("download", `despesas_condomix_${selectedMonth || 'geral'}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  // Cálculos de Totais
   const totalPago = filteredDespesas.filter(d => d.paid_at).reduce((sum, d) => sum + Number(d.amount), 0)
   const totalPendente = filteredDespesas.filter(d => !d.paid_at).reduce((sum, d) => sum + Number(d.amount), 0)
 
+  // Gráficos (Mantidos da versão anterior, apenas referenciados para clareza)
   const categoryData = useMemo(() => {
     const groups: Record<string, number> = {}
     let totalAmount = 0
-
     filteredDespesas.forEach(d => {
       const label = getCategoryStyle(d.category).label
       groups[label] = (groups[label] || 0) + Number(d.amount)
       totalAmount += Number(d.amount)
     })
-
     return Object.entries(groups)
       .map(([label, value]) => ({ label, value, percent: totalAmount ? (value / totalAmount) * 100 : 0 }))
       .sort((a, b) => b.value - a.value)
@@ -158,9 +175,17 @@ export default function Despesas() {
 
   return (
     <PageLayout
-      title="Portal da Transparência" // Atualizado
+      title="Portal da Transparência"
       subtitle="Prestação de contas e gestão financeira"
-      icon="⚖️" // Atualizado
+      icon="⚖️"
+      headerAction={
+        <button 
+          onClick={handleExport}
+          className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg font-bold hover:bg-white/30 transition text-sm flex items-center gap-2 border border-white/30"
+        >
+          <span className="text-lg">📥</span> Exportar CSV
+        </button>
+      }
     >
       {/* --- FILTROS --- */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6 sticky top-20 z-30">
@@ -192,6 +217,7 @@ export default function Despesas() {
 
       {/* --- GRÁFICOS E RESUMOS --- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Card de Balanço */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col justify-between">
           <div>
             <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-4">Balanço do Período</h3>
@@ -209,6 +235,7 @@ export default function Despesas() {
           <div className="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-400 text-center">{filteredDespesas.length} lançamentos encontrados</div>
         </div>
 
+        {/* Card de Evolução */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col">
           <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-4">Evolução de Gastos (6 meses)</h3>
           <div className="flex-1 flex items-end justify-between gap-2 h-32 mt-2">
@@ -228,6 +255,7 @@ export default function Despesas() {
           </div>
         </div>
 
+        {/* Card de Categorias */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
           <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-4">Onde gastamos mais?</h3>
           <div className="space-y-3">

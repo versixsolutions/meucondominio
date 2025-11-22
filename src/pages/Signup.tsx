@@ -2,93 +2,85 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useCondominios } from '../hooks/useCondominios'
+import { signupSchema, type SignupFormData } from '../lib/schemas'
 import type { Condominio } from '../types'
+import { ZodError } from 'zod'
 
-// Logo Versix
 const logo = '/assets/logos/versix-solutions-logo.png'
 
 export default function Signup() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [fullName, setFullName] = useState('')
-  const [condominioId, setCondominioId] = useState('')
-  
-  // Novos Estados
-  const [residentType, setResidentType] = useState('titular')
-  const [unitNumber, setUnitNumber] = useState('')
-  const [phone, setPhone] = useState('')
-  const [isWhatsapp, setIsWhatsapp] = useState(true)
+  // Estado único para o formulário
+  const [formData, setFormData] = useState<SignupFormData>({
+    email: '',
+    password: '',
+    fullName: '',
+    condominioId: '',
+    residentType: 'titular',
+    unitNumber: '',
+    phone: '',
+    isWhatsapp: true
+  })
 
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [generalError, setGeneralError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
   const [isSignedUp, setIsSignedUp] = useState(false)
 
   const { signUp } = useAuth()
   const { condominios, loading: loadingCondominios } = useCondominios()
 
-  // Formata telefone enquanto digita: (99) 99999-9999
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, '')
     if (value.length > 11) value = value.slice(0, 11)
+    if (value.length > 2) value = `(${value.substring(0, 2)}) ${value.substring(2)}`
+    if (value.length > 10) value = `${value.substring(0, 10)}-${value.substring(10)}`
     
-    if (value.length > 2) {
-      value = `(${value.substring(0, 2)}) ${value.substring(2)}`
-    }
-    if (value.length > 10) {
-      value = `${value.substring(0, 10)}-${value.substring(10)}`
-    }
-    setPhone(value)
+    setFormData(prev => ({ ...prev, phone: value }))
+    // Limpa erro específico se existir
+    if (fieldErrors.phone) setFieldErrors(prev => ({ ...prev, phone: '' }))
   }
 
-  // Permite apenas números no campo de unidade
-  const handleUnitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '')
-    setUnitNumber(value)
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+    if (fieldErrors[name]) setFieldErrors(prev => ({ ...prev, [name]: '' }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError('')
+    setGeneralError('')
+    setFieldErrors({})
     setLoading(true)
 
-    if (!condominioId) {
-      setError('Por favor, selecione seu condomínio.')
-      setLoading(false)
-      return
-    }
-    
-    if (!unitNumber) {
-      setError('O número da unidade é obrigatório.')
-      setLoading(false)
-      return
-    }
-
-    if (!phone || phone.length < 14) { // Validação simples de tamanho (xx) xxxxx-xxxx
-      setError('Por favor, informe um telefone válido.')
-      setLoading(false)
-      return
-    }
-
-    if (password.length < 6) {
-      setError('A senha deve ter no mínimo 6 caracteres.')
-      setLoading(false)
-      return
-    }
-
     try {
+      // 1. Validação com Zod
+      const validData = signupSchema.parse(formData)
+
+      // 2. Envio ao Supabase
       await signUp(
-        email, 
-        password, 
-        fullName, 
-        condominioId,
-        phone,
-        unitNumber,
-        residentType,
-        isWhatsapp
+        validData.email, 
+        validData.password, 
+        validData.fullName, 
+        validData.condominioId,
+        validData.phone,
+        validData.unitNumber,
+        validData.residentType,
+        validData.isWhatsapp
       )
+      
       setIsSignedUp(true)
+
     } catch (err: any) {
-      setError(err.message || 'Erro ao criar conta. Tente novamente.')
+      if (err instanceof ZodError) {
+        // Mapeia erros do Zod para o estado de erros de campo
+        const errors: Record<string, string> = {}
+        err.errors.forEach(error => {
+          if (error.path[0]) errors[error.path[0] as string] = error.message
+        })
+        setFieldErrors(errors)
+      } else {
+        setGeneralError(err.message || 'Erro ao criar conta. Tente novamente.')
+      }
     } finally {
       setLoading(false)
     }
@@ -97,15 +89,15 @@ export default function Signup() {
   if (isSignedUp) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary to-secondary flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center animate-fade-in">
           <div className="text-center mb-8">
             <img src={logo} alt="Versix" className="w-40 h-auto mx-auto mb-4" />
             <h1 className="text-3xl font-bold text-gray-900">Quase lá!</h1>
           </div>
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
             <p className="text-green-800 font-semibold">Sua conta foi criada com sucesso!</p>
-            <p className="text-green-700 mt-2">
-              Enviamos um link de confirmação para <strong>{email}</strong>. Verifique sua caixa de entrada.
+            <p className="text-green-700 mt-2 text-sm">
+              Aguarde a <strong>aprovação do síndico</strong> para acessar o sistema. Você receberá um e-mail quando seu acesso for liberado.
             </p>
           </div>
           <Link to="/login" className="w-full inline-block bg-primary text-white py-3 rounded-lg font-bold hover:bg-primary-dark transition">
@@ -118,7 +110,7 @@ export default function Signup() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary to-secondary flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 my-8">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 my-8 animate-fade-in">
         <div className="text-center mb-6">
           <img src={logo} alt="Versix" className="w-32 h-auto mx-auto mb-2" />
           <h1 className="text-2xl font-bold text-gray-900">Meu Condominio</h1>
@@ -126,9 +118,9 @@ export default function Signup() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          {error && (
+          {generalError && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-red-800 text-sm text-center">{error}</p>
+              <p className="text-red-800 text-sm text-center">{generalError}</p>
             </div>
           )}
 
@@ -136,24 +128,25 @@ export default function Signup() {
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Nome Completo</label>
             <input
+              name="fullName"
               type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              value={formData.fullName}
+              onChange={handleChange}
               placeholder="Seu nome completo"
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none ${fieldErrors.fullName ? 'border-red-500' : 'border-gray-300'}`}
             />
+            {fieldErrors.fullName && <p className="text-red-500 text-xs mt-1">{fieldErrors.fullName}</p>}
           </div>
 
           {/* Condomínio */}
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Condomínio</label>
             <select
-              value={condominioId}
-              onChange={(e) => setCondominioId(e.target.value)}
-              required
+              name="condominioId"
+              value={formData.condominioId}
+              onChange={handleChange}
               disabled={loadingCondominios}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none appearance-none bg-white"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none bg-white ${fieldErrors.condominioId ? 'border-red-500' : 'border-gray-300'}`}
             >
               <option value="" disabled>
                 {loadingCondominios ? 'Carregando...' : 'Selecione seu condomínio'}
@@ -162,18 +155,20 @@ export default function Signup() {
                 <option key={cond.id} value={cond.id}>{cond.name}</option>
               ))}
             </select>
+            {fieldErrors.condominioId && <p className="text-red-500 text-xs mt-1">{fieldErrors.condominioId}</p>}
           </div>
 
-          {/* Tipo de Morador e Unidade (Grid) */}
+          {/* Tipo e Unidade */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Sou</label>
               <select
-                value={residentType}
-                onChange={(e) => setResidentType(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none bg-white"
+                name="residentType"
+                value={formData.residentType}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none bg-white"
               >
-                <option value="titular">Titular (Dono)</option>
+                <option value="titular">Titular</option>
                 <option value="inquilino">Inquilino</option>
                 <option value="morador">Morador</option>
               </select>
@@ -181,14 +176,14 @@ export default function Signup() {
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Nº Unidade</label>
               <input
+                name="unitNumber"
                 type="text"
-                inputMode="numeric"
-                value={unitNumber}
-                onChange={handleUnitChange}
+                value={formData.unitNumber}
+                onChange={handleChange}
                 placeholder="Ex: 102"
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none ${fieldErrors.unitNumber ? 'border-red-500' : 'border-gray-300'}`}
               />
+              {fieldErrors.unitNumber && <p className="text-red-500 text-xs mt-1">{fieldErrors.unitNumber}</p>}
             </div>
           </div>
 
@@ -196,18 +191,20 @@ export default function Signup() {
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Celular / WhatsApp</label>
             <input
+              name="phone"
               type="tel"
-              value={phone}
+              value={formData.phone}
               onChange={handlePhoneChange}
               placeholder="(99) 99999-9999"
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none ${fieldErrors.phone ? 'border-red-500' : 'border-gray-300'}`}
             />
+            {fieldErrors.phone && <p className="text-red-500 text-xs mt-1">{fieldErrors.phone}</p>}
+            
             <label className="flex items-center gap-2 mt-2 cursor-pointer">
               <input 
-                type="checkbox" 
-                checked={isWhatsapp}
-                onChange={(e) => setIsWhatsapp(e.target.checked)}
+                type="checkbox"
+                checked={formData.isWhatsapp}
+                onChange={(e) => setFormData(prev => ({ ...prev, isWhatsapp: e.target.checked }))}
                 className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
               />
               <span className="text-xs text-gray-600">Este número é WhatsApp</span>
@@ -218,27 +215,28 @@ export default function Signup() {
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Email</label>
             <input
+              name="email"
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.email}
+              onChange={handleChange}
               placeholder="seu@email.com"
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none ${fieldErrors.email ? 'border-red-500' : 'border-gray-300'}`}
             />
+            {fieldErrors.email && <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>}
           </div>
 
           {/* Senha */}
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Senha</label>
             <input
+              name="password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={formData.password}
+              onChange={handleChange}
               placeholder="••••••••"
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none ${fieldErrors.password ? 'border-red-500' : 'border-gray-300'}`}
             />
-            <p className="text-[10px] text-gray-400 mt-1 text-right">Mínimo 6 caracteres</p>
+            {fieldErrors.password && <p className="text-red-500 text-xs mt-1">{fieldErrors.password}</p>}
           </div>
 
           <button
@@ -246,7 +244,7 @@ export default function Signup() {
             disabled={loading || loadingCondominios}
             className="w-full bg-gradient-to-r from-primary to-secondary text-white py-3 rounded-lg font-bold hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed mt-4"
           >
-            {loading ? 'Criando conta...' : 'Criar Conta'}
+            {loading ? 'Processando...' : 'Criar Conta'}
           </button>
         </form>
 
