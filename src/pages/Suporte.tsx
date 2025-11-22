@@ -26,7 +26,7 @@ export default function Suporte() {
       title: 'Abrir Ocorrência',
       description: 'Reporte problemas, barulhos ou solicite manutenção.',
       icon: '🚨',
-      link: '/ocorrencias/nova', // Direto para nova ocorrência para agilizar
+      link: '/ocorrencias/nova',
       color: 'bg-orange-50 text-orange-600 border-orange-100'
     },
     {
@@ -38,9 +38,9 @@ export default function Suporte() {
     },
     {
       title: 'Falar com o Síndico',
-      description: 'Abra um chamado direto para a administração.',
-      icon: '🎫',
-      action: () => setIsChatOpen(true), // Usa o Chatbot que tem a função de criar ticket
+      description: 'Envie uma mensagem direta para a administração.',
+      icon: '💬', // Ícone alterado para balão de fala
+      link: '/chamados/novo', // MUDANÇA AQUI: Link direto para a nova página
       color: 'bg-green-50 text-green-600 border-green-100'
     }
   ]
@@ -55,6 +55,7 @@ export default function Suporte() {
         {services.map((service) => (
           <div 
             key={service.title}
+            // Lógica simplificada: Se tem action, executa. Se não, navega para o link.
             onClick={() => service.action ? service.action() : navigate(service.link!)}
             className={`
               relative p-5 rounded-xl border cursor-pointer transition-all duration-200
@@ -80,7 +81,7 @@ export default function Suporte() {
         ))}
       </div>
 
-      {/* Card de Emergência */}
+      {/* Card de Emergência (Mantido Igual) */}
       <div className="bg-slate-900 rounded-2xl p-6 text-white relative overflow-hidden shadow-lg">
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-4">
@@ -118,7 +119,6 @@ export default function Suporte() {
           </div>
         </div>
 
-        {/* Background Decorativo */}
         <div className="absolute -right-10 -bottom-10 opacity-5 text-9xl transform rotate-12 pointer-events-none">
           ☎️
         </div>

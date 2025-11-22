@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
-import ReloadPrompt from './components/ReloadPrompt' // <--- Importar
+import ReloadPrompt from './components/ReloadPrompt'
 
 // Pages
 import Login from './pages/Login'
@@ -11,13 +11,14 @@ import FAQ from './pages/FAQ'
 import Despesas from './pages/Despesas'
 import Votacoes from './pages/Votacoes'
 import Ocorrencias from './pages/Ocorrencias'
+import NovaOcorrencia from './pages/NovaOcorrencia'
 import Comunicados from './pages/Comunicados'
 import Profile from './pages/Profile'
 import Suporte from './pages/Suporte'
+import NovoChamado from './pages/NovoChamado' // Importação Nova
 import Comunicacao from './pages/Comunicacao'
 import Biblioteca from './pages/Biblioteca'
 import Layout from './components/Layout'
-import NovaOcorrencia from './pages/NovaOcorrencia'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth()
@@ -36,7 +37,6 @@ export default function App() {
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <ThemeProvider>
-          {/* Componente PWA fica aqui, disponível globalmente */}
           <ReloadPrompt />
           
           <Routes>
@@ -54,10 +54,12 @@ export default function App() {
 
               <Route path="/faq" element={<FAQ />} />
               <Route path="/ocorrencias" element={<Ocorrencias />} />
+              <Route path="/ocorrencias/nova" element={<NovaOcorrencia />} />
+              <Route path="/chamados/novo" element={<NovoChamado />} /> {/* Rota Nova */}
               <Route path="/biblioteca" element={<Biblioteca />} />
               <Route path="/comunicados" element={<Comunicados />} />
               <Route path="/votacoes" element={<Votacoes />} />
-              <Route path="/ocorrencias/nova" element={<NovaOcorrencia />} />
+              
               <Route path="/despesas" element={<Navigate to="/transparencia" replace />} />
             </Route>
           </Routes>
