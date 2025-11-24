@@ -1,14 +1,13 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
 import type { User, Session } from '@supabase/supabase-js'
-// Importando o tipo atualizado
 import type { UserRole } from '../types'
 
 interface UserProfile {
   id: string
   email: string
   full_name: string | null
-  role: UserRole // Tipagem forte
+  role: UserRole
   phone: string | null
   unit_number: string | null
   resident_type: string | null
@@ -36,15 +35,12 @@ interface AuthContextType {
   ) => Promise<void>
   signOut: () => Promise<void>
   
-  // Helpers de Permissão (Novos)
-  isAdmin: boolean       // Acesso total
-  isSindico: boolean     // Gestão
-  isSubSindico: boolean  // Apoio
-  isConselho: boolean    // Auditoria/Leitura avançada
-  isMorador: boolean     // Acesso básico
-  
-  // Helper de função composta (Ex: Pode gerenciar?)
-  canManage: boolean     // True para Admin, Sindico e Sub
+  isAdmin: boolean
+  isSindico: boolean
+  isSubSindico: boolean
+  isConselho: boolean
+  isMorador: boolean
+  canManage: boolean
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -95,7 +91,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ...data,
           condominio_name: data.condominios?.name || null,
           condominio_id: data.condominio_id,
-          // Força o cast para o tipo UserRole para garantir compatibilidade
           role: (data.role as UserRole) || 'morador' 
         }
         setProfile(mappedProfile)
@@ -133,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           unit_number: unitNumber,
           resident_type: residentType,
           is_whatsapp: isWhatsapp,
-          role: 'pending' // Todo cadastro começa como pendente/morador até aprovação
+          role: 'pending'
         },
       },
     })
@@ -154,7 +149,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Lógica de Permissões
   const role = profile?.role || 'morador'
   
   const value = {
@@ -165,15 +159,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signIn,
     signUp,
     signOut,
-    
-    // Helpers Booleanos para facilitar o uso nos componentes
     isAdmin: role === 'admin',
     isSindico: role === 'sindico',
     isSubSindico: role === 'sub_sindico',
     isConselho: role === 'conselho',
     isMorador: role === 'morador' || role === 'pending',
-    
-    // Permissão composta: Quem pode gerenciar/editar coisas
     canManage: ['admin', 'sindico', 'sub_sindico'].includes(role)
   }
 

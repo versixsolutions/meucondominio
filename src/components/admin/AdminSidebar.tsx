@@ -10,6 +10,8 @@ export default function AdminSidebar({ onClose }: { onClose?: () => void }) {
 
   const menuItems = [
     { path: '/admin', label: 'Visão Geral', icon: '📊' },
+    // Apenas Super Admins devem ver a gestão de condomínios (Multi-tenant)
+    ...(isAdmin ? [{ path: '/admin/condominios', label: 'Condomínios', icon: '🏢' }] : []),
     { path: '/admin/usuarios', label: 'Gestão de Acesso', icon: '👥' },
     { path: '/admin/ocorrencias', label: 'Ocorrências', icon: '🚨' },
     { path: '/admin/comunicados', label: 'Comunicados', icon: '📢' },

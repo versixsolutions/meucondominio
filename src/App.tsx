@@ -4,7 +4,7 @@ import { ThemeProvider } from './contexts/ThemeContext'
 import ReloadPrompt from './components/ReloadPrompt'
 import { Toaster } from 'react-hot-toast'
 
-// Pages Comuns - Verificando caminhos
+// Pages Comuns
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
@@ -22,7 +22,7 @@ import Biblioteca from './pages/Biblioteca'
 import Layout from './components/Layout'
 import PendingApproval from './pages/PendingApproval'
 
-// Pages Admin - Verificando caminhos
+// Pages Admin
 import AdminLayout from './components/admin/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import UserManagement from './pages/admin/UserManagement'
@@ -30,6 +30,7 @@ import OcorrenciasManagement from './pages/admin/OcorrenciasManagement'
 import ComunicadosManagement from './pages/admin/ComunicadosManagement'
 import VotacoesManagement from './pages/admin/VotacoesManagement'
 import FinanceiroManagement from './pages/admin/FinanceiroManagement'
+import CondominioManagement from './pages/admin/CondominioManagement' // NOVO IMPORT
 
 // Componente de Proteção de Rota
 function PrivateRoute({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) {
@@ -141,12 +142,12 @@ export default function App() {
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
               <Route path="usuarios" element={<UserManagement />} />
+              <Route path="condominios" element={<CondominioManagement />} /> {/* NOVA ROTA */}
               <Route path="ocorrencias" element={<OcorrenciasManagement />} />
               <Route path="comunicados" element={<ComunicadosManagement />} />
               <Route path="votacoes" element={<VotacoesManagement />} />
               <Route path="financeiro" element={<FinanceiroManagement />} />
               
-              {/* Rotas Futuras */}
               <Route path="ia" element={<div className="p-8">Treinamento de IA (Em breve)</div>} />
             </Route>
 
