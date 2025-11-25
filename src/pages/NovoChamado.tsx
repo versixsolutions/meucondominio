@@ -32,7 +32,7 @@ export default function NovoChamado() {
     try {
       const { error } = await supabase.from('chamados').insert({
         user_id: user.id,
-        // Identificação visual clara para o síndico saber a origem
+        // Identificação visual clara para o síndico saber a origem (Atualizado para Norma)
         subject: `[Suporte] ${formData.subject}`, 
         description: formData.description,
         status: 'aberto'

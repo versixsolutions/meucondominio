@@ -47,7 +47,8 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
 
       setMessages([{
         id: '1',
-        text: `${greeting}, ${name}! Sou a **Ísis**, sua assistente virtual. 🤖\n\nMeu sistema funciona por **palavras-chave**. Pergunte sobre "obras", "piscina" ou "mudança" que eu busco no Regimento Interno do seu condomínio.`,
+        // ALTERADO DE Ísis PARA Norma
+        text: `${greeting}, ${name}! Sou a **Norma**, sua assistente virtual. 🤖\n\nMeu sistema funciona por **palavras-chave**. Pergunte sobre "obras", "piscina" ou "mudança" que eu busco no Regimento Interno do seu condomínio.`,
         sender: 'bot',
         timestamp: new Date()
       }])
@@ -61,7 +62,7 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
     try {
       const { error } = await supabase.from('chamados').insert({
         user_id: user.id,
-        subject: 'Dúvida via Chatbot (Ísis)',
+        subject: 'Dúvida via Chatbot (Norma)', // ALTERADO AQUI TAMBÉM
         description: lastQuestion, 
         status: 'aberto'
       })
@@ -174,7 +175,8 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
       <div className="bg-gradient-to-r from-primary to-secondary p-3 text-white flex justify-between items-center cursor-pointer" onClick={onClose}>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-lg backdrop-blur-sm border border-white/20">👩‍💻</div>
-          <div><h3 className="font-bold text-sm">Fale com a Ísis</h3><p className="text-[10px] opacity-90 flex items-center gap-1"><span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span> Online</p></div>
+          {/* ALTERADO DE Ísis PARA Norma */}
+          <div><h3 className="font-bold text-sm">Fale com a Norma</h3><p className="text-[10px] opacity-90 flex items-center gap-1"><span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span> Online</p></div>
         </div>
         <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="text-white/80 hover:text-white p-1 hover:bg-white/10 rounded transition"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
       </div>
@@ -195,7 +197,8 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
             )}
           </div>
         ))}
-        {isTyping && <div className="flex justify-start"><div className="bg-white border border-gray-200 p-3 rounded-2xl rounded-bl-none flex gap-1 items-center shadow-sm"><span className="text-[10px] text-gray-400 mr-2 font-medium">Ísis digitando</span><span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce"></span><span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce delay-100"></span><span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce delay-200"></span></div></div>}
+        {/* ALTERADO DE Ísis PARA Norma */}
+        {isTyping && <div className="flex justify-start"><div className="bg-white border border-gray-200 p-3 rounded-2xl rounded-bl-none flex gap-1 items-center shadow-sm"><span className="text-[10px] text-gray-400 mr-2 font-medium">Norma digitando</span><span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce"></span><span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce delay-100"></span><span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce delay-200"></span></div></div>}
         <div ref={messagesEndRef} />
       </div>
 

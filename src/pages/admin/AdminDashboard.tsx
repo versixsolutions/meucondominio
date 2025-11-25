@@ -123,7 +123,8 @@ export default function AdminDashboard() {
         <div className="bg-gradient-to-br from-blue-900 to-slate-900 text-white p-6 rounded-xl shadow-lg relative overflow-hidden">
           <div className="relative z-10">
             <h3 className="font-bold text-lg mb-2">Inteligência Artificial</h3>
-            <p className="text-blue-100 text-sm mb-4">A Ísis respondeu a 45 dúvidas esta semana. Mantenha a base de conhecimento atualizada para melhorar as respostas.</p>
+            {/* ALTERADO DE Ísis PARA Norma */}
+            <p className="text-blue-100 text-sm mb-4">A Norma respondeu a 45 dúvidas esta semana. Mantenha a base de conhecimento atualizada para melhorar as respostas.</p>
             <button className="bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 px-4 py-2 rounded-lg text-sm font-bold transition">
               Ver logs da IA
             </button>
