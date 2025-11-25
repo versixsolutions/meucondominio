@@ -78,29 +78,56 @@ export default function CondominioManagement() {
 
   // --- LÓGICA DE PARSER DA RECEITA FEDERAL ---
   const parseReceitaPDF = (text: string) => {
-    console.log("Texto extraído:", text) // Debug
+    // 1. Limpeza: Remove múltiplos espaços e quebras, deixando tudo numa linha só para facilitar regex
+    const cleanText = text.replace(/\s+/g, ' ').trim()
+    console.log("Texto Extraído (Clean):", cleanText)
 
-    // Regex simples para capturar campos comuns do Cartão CNPJ
-    // Nota: O layout do PDF pode variar, regex busca padrões de chave/valor
+    // 2. Regex Otimizados (Buscam âncoras de início e fim mais genéricas)
     
-    const cnpjMatch = text.match(/NÚMERO DE INSCRIÇÃO\s+(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})/i)
-    const nomeEmpresarialMatch = text.match(/NOME EMPRESARIAL\s+(.*?)\s+TITULO DO ESTABELECIMENTO/i) || text.match(/NOME EMPRESARIAL\s+(.*?)\s+PORTE/i)
-    const nomeFantasiaMatch = text.match(/TÍTULO DO ESTABELECIMENTO \(NOME DE FANTASIA\)\s+(.*?)\s+CÓDIGO/i)
+    // CNPJ: Procura padrão numérico exato XX.XXX.XXX/XXXX-XX
+    const cnpjMatch = cleanText.match(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/)
     
-    // Endereço é mais chato, geralmente está em LOGRADOURO, NÚMERO, BAIRRO...
-    const logradouroMatch = text.match(/LOGRADOURO\s+(.*?)\s+NÚMERO/i)
-    const numeroMatch = text.match(/NÚMERO\s+(.*?)\s+COMPLEMENTO/i)
-    const bairroMatch = text.match(/BAIRRO\/DISTRITO\s+(.*?)\s+MUNICÍPIO/i)
-    const municipioMatch = text.match(/MUNICÍPIO\s+(.*?)\s+UF/i)
-    const ufMatch = text.match(/UF\s+([A-Z]{2})/i)
-    const emailMatch = text.match(/ENDEREÇO ELETRÔNICO\s+(.*?)\s+TELEFONE/i)
-    const telefoneMatch = text.match(/TELEFONE\s+(.*?)\s+ENTE FEDERATIVO/i)
+    // Razão Social: Pega tudo entre "NOME EMPRESARIAL" e o próximo campo provável ("TÍTULO" ou "PORTE")
+    const razaoSocialMatch = cleanText.match(/NOME EMPRESARIAL\s+(.*?)\s+(?:TÍTULO DO ESTABELECIMENTO|PORTE|CÓDIGO E DESCRIÇÃO)/i)
+    
+    // Nome Fantasia: Entre "NOME DE FANTASIA)" e "PORTE" ou "CÓDIGO"
+    // Nota: O PDF às vezes usa "********" quando não tem fantasia
+    const nomeFantasiaMatch = cleanText.match(/NOME DE FANTASIA\)\s+(.*?)\s+(?:PORTE|CÓDIGO E DESCRIÇÃO)/i)
+    
+    // Endereço - Logradouro
+    const logradouroMatch = cleanText.match(/LOGRADOURO\s+(.*?)\s+NÚMERO/i)
+    // Endereço - Número
+    const numeroMatch = cleanText.match(/NÚMERO\s+(.*?)\s+COMPLEMENTO/i)
+    // Endereço - Bairro
+    const bairroMatch = cleanText.match(/BAIRRO\/DISTRITO\s+(.*?)\s+MUNICÍPIO/i)
+    // Endereço - Município
+    const municipioMatch = cleanText.match(/MUNICÍPIO\s+(.*?)\s+UF/i)
+    // Endereço - UF (Procura UF seguido de 2 letras maiúsculas)
+    const ufMatch = cleanText.match(/UF\s+([A-Z]{2})/i)
+    
+    // Contato
+    const emailMatch = cleanText.match(/ENDEREÇO ELETRÔNICO\s+(.*?)\s+TELEFONE/i)
+    const telefoneMatch = cleanText.match(/TELEFONE\s+(.*?)\s+ENTE FEDERATIVO/i)
 
+    // Lógica de Fallback para o Nome de Exibição
+    let displayName = ''
+    if (nomeFantasiaMatch && nomeFantasiaMatch[1] && !nomeFantasiaMatch[1].includes('****')) {
+      displayName = nomeFantasiaMatch[1].trim()
+    } else if (razaoSocialMatch) {
+      displayName = razaoSocialMatch[1].trim()
+    }
+
+    // Monta endereço
+    const parts = []
+    if (logradouroMatch) parts.push(logradouroMatch[1].trim())
+    if (numeroMatch) parts.push(numeroMatch[1].trim())
+    if (bairroMatch) parts.push(bairroMatch[1].trim())
+    
     return {
-      cnpj: cnpjMatch ? cnpjMatch[1] : '',
-      razaoSocial: nomeEmpresarialMatch ? nomeEmpresarialMatch[1].trim() : '',
-      name: nomeFantasiaMatch ? nomeFantasiaMatch[1].trim() : (nomeEmpresarialMatch ? nomeEmpresarialMatch[1].trim() : ''),
-      address: `${logradouroMatch ? logradouroMatch[1].trim() : ''}, ${numeroMatch ? numeroMatch[1].trim() : ''} - ${bairroMatch ? bairroMatch[1].trim() : ''}`,
+      cnpj: cnpjMatch ? cnpjMatch[0] : '',
+      razaoSocial: razaoSocialMatch ? razaoSocialMatch[1].trim() : '',
+      name: displayName, // Nome Fantasia ou Razão Social
+      address: parts.join(', '),
       city: municipioMatch ? municipioMatch[1].trim() : '',
       state: ufMatch ? ufMatch[1].trim() : '',
       email: emailMatch ? emailMatch[1].trim().toLowerCase() : '',
@@ -119,6 +146,11 @@ export default function CondominioManagement() {
       const text = await extractTextFromPDF(file)
       const extractedData = parseReceitaPDF(text)
 
+      // VALIDAÇÃO: Se não achou CNPJ, provavelmente a leitura falhou ou é o PDF errado
+      if (!extractedData.cnpj) {
+        throw new Error('Não foi possível identificar os dados do CNPJ. Verifique se o arquivo é um Cartão CNPJ válido.')
+      }
+
       setFormData(prev => ({
         ...prev,
         ...extractedData,
@@ -129,9 +161,9 @@ export default function CondominioManagement() {
       }))
 
       toast.success('Dados extraídos com sucesso!', { id: toastId })
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
-      toast.error('Não foi possível ler o PDF. Verifique se é um arquivo válido.', { id: toastId })
+      toast.error(error.message || 'Falha ao processar PDF', { id: toastId })
     } finally {
       setIsProcessingPdf(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
