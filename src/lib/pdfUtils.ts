@@ -6,7 +6,16 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLi
 export async function extractTextFromPDF(file: File): Promise<string> {
   try {
     const arrayBuffer = await file.arrayBuffer()
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+    
+    // CORREÇÃO PRINCIPAL: Adicionar cMapUrl e cMapPacked
+    // Isso permite que o PDF.js decodifique corretamente fontes complexas (como as da Receita Federal)
+    // sem transformar texto em caracteres aleatórios.
+    const pdf = await pdfjsLib.getDocument({ 
+      data: arrayBuffer,
+      cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/cmaps/`,
+      cMapPacked: true,
+    }).promise
+
     let fullText = ''
 
     // Percorre todas as páginas
@@ -15,9 +24,6 @@ export async function extractTextFromPDF(file: File): Promise<string> {
       const textContent = await page.getTextContent()
       
       // Junta os fragmentos de texto da página
-      // Adicionamos um espaço para garantir que palavras não colem, 
-      // mas o ideal seria usar a geometria (transform) para saber se é nova linha.
-      // Para este caso simples, ' ' costuma bastar.
       const pageText = textContent.items
         .map((item: any) => item.str)
         .join(' ')
