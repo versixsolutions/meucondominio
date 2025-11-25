@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { extractTextFromPDF } from '../../lib/pdfUtils'
-import PageLayout from '../../components/PageLayout'
 import LoadingSpinner from '../../components/LoadingSpinner'
 import EmptyState from '../../components/EmptyState'
 import Modal from '../../components/ui/Modal'
@@ -35,7 +34,7 @@ const INITIAL_FORM = {
   
   // 3. Estrutura
   totalUnits: '',
-  blocks: '', // Será convertido em array
+  blocks: '', 
   modules: {
     faq: true,
     reservas: false,
@@ -76,62 +75,88 @@ export default function CondominioManagement() {
     }
   }
 
-  // --- LÓGICA DE PARSER DA RECEITA FEDERAL ---
+  // --- PARSER ROBUSTO DA RECEITA FEDERAL ---
   const parseReceitaPDF = (text: string) => {
-    // 1. Limpeza: Remove múltiplos espaços e quebras, deixando tudo numa linha só para facilitar regex
+    // 1. Limpeza agressiva para normalizar espaços
     const cleanText = text.replace(/\s+/g, ' ').trim()
     console.log("Texto Extraído (Clean):", cleanText)
 
-    // 2. Regex Otimizados (Buscam âncoras de início e fim mais genéricas)
-    
-    // CNPJ: Procura padrão numérico exato XX.XXX.XXX/XXXX-XX
-    const cnpjMatch = cleanText.match(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/)
-    
-    // Razão Social: Pega tudo entre "NOME EMPRESARIAL" e o próximo campo provável ("TÍTULO" ou "PORTE")
-    const razaoSocialMatch = cleanText.match(/NOME EMPRESARIAL\s+(.*?)\s+(?:TÍTULO DO ESTABELECIMENTO|PORTE|CÓDIGO E DESCRIÇÃO)/i)
-    
-    // Nome Fantasia: Entre "NOME DE FANTASIA)" e "PORTE" ou "CÓDIGO"
-    // Nota: O PDF às vezes usa "********" quando não tem fantasia
-    const nomeFantasiaMatch = cleanText.match(/NOME DE FANTASIA\)\s+(.*?)\s+(?:PORTE|CÓDIGO E DESCRIÇÃO)/i)
-    
-    // Endereço - Logradouro
-    const logradouroMatch = cleanText.match(/LOGRADOURO\s+(.*?)\s+NÚMERO/i)
-    // Endereço - Número
-    const numeroMatch = cleanText.match(/NÚMERO\s+(.*?)\s+COMPLEMENTO/i)
-    // Endereço - Bairro
-    const bairroMatch = cleanText.match(/BAIRRO\/DISTRITO\s+(.*?)\s+MUNICÍPIO/i)
-    // Endereço - Município
-    const municipioMatch = cleanText.match(/MUNICÍPIO\s+(.*?)\s+UF/i)
-    // Endereço - UF (Procura UF seguido de 2 letras maiúsculas)
-    const ufMatch = cleanText.match(/UF\s+([A-Z]{2})/i)
-    
-    // Contato
-    const emailMatch = cleanText.match(/ENDEREÇO ELETRÔNICO\s+(.*?)\s+TELEFONE/i)
-    const telefoneMatch = cleanText.match(/TELEFONE\s+(.*?)\s+ENTE FEDERATIVO/i)
+    // Helper para extrair texto entre dois marcadores (com lista de paradas opcionais)
+    const extractField = (startRegex: RegExp, stopRegexes: RegExp[]) => {
+      const match = cleanText.match(startRegex)
+      if (!match || !match.index) return ''
+      
+      const startIndex = match.index + match[0].length
+      const textAfterStart = cleanText.slice(startIndex)
+      
+      let bestStopIndex = textAfterStart.length
+      
+      // Procura o marcador de parada mais próximo
+      stopRegexes.forEach(stopRegex => {
+        const stopMatch = textAfterStart.match(stopRegex)
+        if (stopMatch && stopMatch.index !== undefined && stopMatch.index < bestStopIndex) {
+          bestStopIndex = stopMatch.index
+        }
+      })
 
-    // Lógica de Fallback para o Nome de Exibição
-    let displayName = ''
-    if (nomeFantasiaMatch && nomeFantasiaMatch[1] && !nomeFantasiaMatch[1].includes('****')) {
-      displayName = nomeFantasiaMatch[1].trim()
-    } else if (razaoSocialMatch) {
-      displayName = razaoSocialMatch[1].trim()
+      return textAfterStart.slice(0, bestStopIndex).trim().replace(/[*]+/g, '') // Remove asteriscos de campos vazios
     }
 
-    // Monta endereço
-    const parts = []
-    if (logradouroMatch) parts.push(logradouroMatch[1].trim())
-    if (numeroMatch) parts.push(numeroMatch[1].trim())
-    if (bairroMatch) parts.push(bairroMatch[1].trim())
+    // 2. Extração de Campos com Regex Flexível (aceita . ou , no CNPJ)
+    const cnpjMatch = cleanText.match(/\d{2}[\.,]\d{3}[\.,]\d{3}\/\d{4}-\d{2}/)
+    const cnpj = cnpjMatch ? cnpjMatch[0].replace(/,/g, '.') : '' // Normaliza para pontos
+
+    // Razão Social
+    const razaoSocial = extractField(/NOME EMPRESARIAL\s+/i, [/TÍTULO DO ESTABELECIMENTO/i, /PORTE/i])
     
+    // Nome Fantasia
+    const nomeFantasia = extractField(/NOME DE FANTASIA\)\s+/i, [/PORTE/i, /CÓDIGO E DESCRIÇÃO/i])
+
+    // Endereço: Logradouro (Muitas vezes para no CEP ou no Número)
+    const logradouro = extractField(/LOGRADOURO\s+/i, [/CEP/i, /NÚMERO/i, /BAIRRO/i])
+    
+    // Número
+    const numero = extractField(/NÚMERO\s+/i, [/COMPLEMENTO/i, /MUNICÍPIO/i, /BAIRRO/i])
+    
+    // Bairro (Pode parar no Município, UF ou Email)
+    const bairro = extractField(/BAIRRO\/?\s*DISTRITO\s+/i, [/MUNICÍPIO/i, /CEP/i, /ENDEREÇO ELETRÔNICO/i, /[A-Z0-9._%+-]+@[A-Z0-9.-]+/i])
+
+    // Município
+    const municipio = extractField(/MUNICÍPIO\s+/i, [/UF/i, /TELEFONE/i])
+
+    // UF
+    const ufMatch = cleanText.match(/UF\s+([A-Z]{2})/i)
+    const uf = ufMatch ? ufMatch[1] : ''
+
+    // Contatos
+    // Tenta pegar email padrão ou procura um padrão de email solto próximo ao campo
+    let email = extractField(/ENDEREÇO ELETRÔNICO\s+/i, [/TELEFONE/i, /ENTE FEDERATIVO/i])
+    // Se o extrator pegou lixo, tenta achar um email válido no texto bruto
+    if (!email.includes('@')) {
+      const emailRegexMatch = cleanText.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/)
+      if (emailRegexMatch) email = emailRegexMatch[0]
+    }
+
+    const telefone = extractField(/TELEFONE\s+/i, [/ENTE FEDERATIVO/i, /SITUAÇÃO CADASTRAL/i])
+
+    // Lógica de Nome de Exibição
+    const displayName = nomeFantasia && nomeFantasia.length > 2 ? nomeFantasia : razaoSocial
+
+    // Monta endereço completo
+    const addressParts = []
+    if (logradouro) addressParts.push(logradouro)
+    if (numero) addressParts.push(numero)
+    if (bairro) addressParts.push(bairro)
+
     return {
-      cnpj: cnpjMatch ? cnpjMatch[0] : '',
-      razaoSocial: razaoSocialMatch ? razaoSocialMatch[1].trim() : '',
-      name: displayName, // Nome Fantasia ou Razão Social
-      address: parts.join(', '),
-      city: municipioMatch ? municipioMatch[1].trim() : '',
-      state: ufMatch ? ufMatch[1].trim() : '',
-      email: emailMatch ? emailMatch[1].trim().toLowerCase() : '',
-      phone: telefoneMatch ? telefoneMatch[1].trim() : ''
+      cnpj,
+      razaoSocial,
+      name: displayName,
+      address: addressParts.join(', '),
+      city: municipio,
+      state: uf,
+      email: email.toLowerCase(),
+      phone: telefone
     }
   }
 
@@ -146,18 +171,17 @@ export default function CondominioManagement() {
       const text = await extractTextFromPDF(file)
       const extractedData = parseReceitaPDF(text)
 
-      // VALIDAÇÃO: Se não achou CNPJ, provavelmente a leitura falhou ou é o PDF errado
+      // VALIDAÇÃO
       if (!extractedData.cnpj) {
-        throw new Error('Não foi possível identificar os dados do CNPJ. Verifique se o arquivo é um Cartão CNPJ válido.')
+        console.error("Falha na extração. Texto bruto:", text)
+        throw new Error('Não foi possível encontrar um CNPJ válido no documento.')
       }
 
       setFormData(prev => ({
         ...prev,
         ...extractedData,
-        // Gera um slug automático se encontrar o nome
-        slug: extractedData.name 
-          ? extractedData.name.toLowerCase().replace(/[^a-z0-9]/g, '') 
-          : prev.slug
+        // Gera slug apenas se não houver um definido ou se o atual for padrão
+        slug: !prev.slug ? (extractedData.name ? extractedData.name.toLowerCase().replace(/[^a-z0-9]/g, '') : '') : prev.slug
       }))
 
       toast.success('Dados extraídos com sucesso!', { id: toastId })
@@ -175,14 +199,13 @@ export default function CondominioManagement() {
     const toastId = toast.loading('Criando condomínio...')
 
     try {
-      // Montar o JSON de configuração
       const themeConfig = {
         colors: {
           primary: formData.primaryColor,
           secondary: formData.secondaryColor
         },
         branding: {
-          logoUrl: formData.logoUrl || '/assets/logos/versix-solutions-logo.png', // Fallback
+          logoUrl: formData.logoUrl || '/assets/logos/versix-solutions-logo.png',
         },
         modules: formData.modules,
         structure: {
