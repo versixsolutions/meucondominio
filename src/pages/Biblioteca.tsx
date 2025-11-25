@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../contexts/AuthContext' // Importar contexto
+import { useAuth } from '../contexts/AuthContext'
 import { extractTextFromPDF } from '../lib/pdfUtils'
 import PageLayout from '../components/PageLayout'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -123,22 +123,17 @@ export default function Biblioteca() {
 
       if (dbError) throw dbError
 
-      // --- NOVO: CRIAR COMUNICADO AUTOMÁTICO ---
-      // Isso garante que apareça no feed e dispare notificação (via trigger ou webhook do Supabase)
+      // LÓGICA DE COMUNICADO AUTOMÁTICO
       const { error: comunicError } = await supabase.from('comunicados').insert({
         title: `Novo Documento: ${selectedFile.name.replace('.pdf', '')}`,
-        content: `Um novo arquivo foi adicionado à Biblioteca Digital na categoria **${categoryLabel}**. \n\nAcesse a biblioteca para visualizar ou baixar o documento completo.`,
-        type: 'informativo', // Usa um tipo existente para garantir compatibilidade
+        content: `Um novo arquivo foi adicionado à Biblioteca Digital na categoria **${categoryLabel}**.`,
+        type: 'informativo', 
         priority: 1,
-        author_id: user.id,
-        condominio_id: profile.condominio_id
+        author_id: user?.id,
+        condominio_id: profile?.condominio_id
       })
 
-      if (comunicError) {
-        console.error("Erro ao criar comunicado automático:", comunicError)
-        // Não falhamos o upload se o comunicado falhar, apenas logamos
-      }
-      // -----------------------------------------
+      if (comunicError) console.error("Erro ao criar comunicado:", comunicError)
 
       alert('Documento salvo e publicado no mural!')
       setIsModalOpen(false)
@@ -199,83 +194,70 @@ export default function Biblioteca() {
             const category = CATEGORIAS_DOCS.find(c => c.id === doc.metadata?.category) || CATEGORIAS_DOCS[6]
             const isExpanded = expandedDocs.has(doc.id)
             
-            // Resumo: Pega os primeiros 180 caracteres
-            const summary = doc.content.slice(0, 180).replace(/\s+/g, ' ') + (doc.content.length > 180 ? '...' : '')
+            // Resumo mais limpo e curto
+            // Remove caracteres de controle estranhos e espaços múltiplos
+            const cleanContent = doc.content.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+            const summary = cleanContent.slice(0, 140) + (cleanContent.length > 140 ? '...' : '')
 
             return (
               <div key={doc.id} className={`bg-white p-5 rounded-xl shadow-sm border border-gray-200 hover:border-primary transition group relative overflow-hidden ${isExpanded ? 'ring-2 ring-primary ring-opacity-50' : ''}`}>
                 
                 {/* Header do Card */}
-                <div className="flex justify-between items-start mb-3">
+                <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-2">
                     <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${category.color}`}>
                       {category.icon} {category.label}
                     </span>
                   </div>
-                  {/* Botão de Download só aparece se expandido */}
-                  {isExpanded && doc.metadata?.url && (
-                    <a 
-                      href={doc.metadata.url} 
-                      target="_blank" 
-                      rel="noreferrer" 
-                      className="text-gray-400 hover:text-primary transition p-1 rounded-full hover:bg-gray-50 animate-fade-in" 
-                      title="Baixar PDF Completo"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                    </a>
-                  )}
                 </div>
 
-                <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1">{doc.title || doc.metadata?.title}</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-3 line-clamp-1">{doc.title || doc.metadata?.title}</h3>
                 
-                {/* Conteúdo Condicional */}
-                <div className={`bg-gray-50 p-3 rounded-lg border border-gray-100 relative transition-all duration-300 ${isExpanded ? 'bg-white border-gray-200' : 'h-auto'}`}>
+                {/* Área de Conteúdo */}
+                <div className={`relative transition-all duration-300`}>
                   
                   {isExpanded ? (
-                    // Conteúdo Expandido (Exibe mais texto + Link)
+                    // Conteúdo Expandido (Texto maior + Link)
                     <div className="animate-fade-in">
-                       {/* Exibe um trecho maior, mas ainda não tudo se for gigante, para não quebrar layout */}
-                       <p className="text-sm text-gray-700 leading-relaxed font-mono whitespace-pre-line mb-4">
-                         {doc.content.slice(0, 1000)}
-                         {doc.content.length > 1000 && <span className="text-gray-400 italic"> (conteúdo truncado para visualização)</span>}
-                       </p>
-                       
-                       <div className="flex justify-end pt-2 border-t border-gray-100">
-                          {doc.metadata?.url && (
-                            <a 
-                              href={doc.metadata.url} 
-                              target="_blank" 
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-primary-dark transition shadow-sm"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                              Abrir PDF Completo
-                            </a>
-                          )}
+                       <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 mb-4">
+                         <p className="text-sm text-gray-700 leading-relaxed font-sans whitespace-pre-line">
+                           {/* Mostra um trecho generoso mas não o PDF inteiro em texto para não poluir */}
+                           {doc.content.slice(0, 2000)}
+                           {doc.content.length > 2000 && <span className="text-gray-400 italic block mt-2">(...continuar lendo no PDF original)</span>}
+                         </p>
                        </div>
+                       
+                       {doc.metadata?.url && (
+                          <a 
+                            href={doc.metadata.url} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            className="w-full flex items-center justify-center gap-2 bg-primary text-white px-4 py-3 rounded-lg text-sm font-bold hover:bg-primary-dark transition shadow-md mb-2"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            Abrir Documento PDF
+                          </a>
+                       )}
                     </div>
                   ) : (
-                    // Resumo (Estado Recolhido)
-                    <div>
-                      <p className="text-xs text-gray-500 leading-relaxed font-mono break-words">
-                        {summary}
-                      </p>
-                      {/* Gradiente para indicar continuidade */}
-                      <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-gray-50 to-transparent pointer-events-none"></div>
+                    // Resumo (Estado Recolhido) - Visual mais limpo
+                    <div className="text-sm text-gray-500 mb-2">
+                      <span className="font-medium text-gray-700">Resumo: </span>
+                      {summary}
                     </div>
                   )}
 
                 </div>
 
-                {/* Botão de Toggle (Leia Mais / Menos) */}
+                {/* Botão de Toggle */}
                 <button 
                   onClick={() => toggleExpand(doc.id)}
-                  className="mt-3 text-xs font-bold text-primary hover:text-primary-dark flex items-center gap-1 hover:underline focus:outline-none"
+                  className="w-full py-2 mt-2 text-xs font-bold text-primary uppercase tracking-wider border border-primary/20 rounded-lg hover:bg-primary/5 transition flex items-center justify-center gap-2"
                 >
                   {isExpanded ? (
-                    <>Ler menos <svg className="w-3 h-3 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></>
+                    <>Recolher <svg className="w-3 h-3 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></>
                   ) : (
-                    <>Leia mais e acesse o PDF <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></>
+                    <>Ler Mais & Acessar PDF <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></>
                   )}
                 </button>
 
