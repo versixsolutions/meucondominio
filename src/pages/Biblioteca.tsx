@@ -31,9 +31,9 @@ interface Documento {
     source: string
     url?: string
     category?: string
+    is_chunk?: boolean
   }
   created_at: string
-  embedding?: any
 }
 
 function sanitizeFileName(name: string) {
@@ -45,16 +45,19 @@ function sanitizeFileName(name: string) {
     .toLowerCase()
 }
 
-// Helper para gerar "tópicos" falsos a partir do texto cru para o resumo visual
-function generateTopics(text: string): string[] {
-  // Limpa o texto
-  const cleanText = text.replace(/\s+/g, ' ').trim()
-  // Tenta dividir por frases ou quebras comuns
-  const sentences = cleanText.split(/(?<=[.?!])\s+|(?=Art\.)|(?=Cláusula)/)
-    .filter(s => s.length > 15) // Ignora fragmentos muito curtos
-    .slice(0, 3) // Pega as 3 primeiras frases relevantes
-  
-  return sentences.length > 0 ? sentences : [cleanText.slice(0, 150) + '...']
+// Função de fragmentação (Reutilizada para visualização)
+function splitTextIntoChunks(text: string): string[] {
+  const cleanText = text.replace(/--- PAGE \d+ ---/g, '');
+  const splitRegex = /(?=\n\s*(?:Artigo|Art\.|CAPÍTULO|Secção)\s+[\dIVX]+)/i;
+  const rawChunks = cleanText.split(splitRegex);
+  const chunks = rawChunks.map(c => c.trim()).filter(c => c.length > 30); // Filtro levemente ajustado
+
+  if (chunks.length <= 1) {
+    // Se não achou artigos, tenta quebrar por parágrafos duplos ou pontos finais
+    return cleanText.split(/\n\n+/).filter(s => s.length > 50).slice(0, 5);
+  }
+
+  return chunks;
 }
 
 export default function Biblioteca() {
@@ -64,9 +67,7 @@ export default function Biblioteca() {
   const [uploading, setUploading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null)
-  
   const [expandedDocs, setExpandedDocs] = useState<Set<number>>(new Set())
-  
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [uploadCategory, setUploadCategory] = useState('atas')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -84,6 +85,7 @@ export default function Biblioteca() {
         .from('documents')
         .select('*')
         .eq('condominio_id', profile?.condominio_id)
+        .is('metadata->>is_chunk', null) 
         .order('id', { ascending: false })
 
       if (error) throw error
@@ -116,16 +118,10 @@ export default function Biblioteca() {
       const textContent = await extractTextFromPDF(selectedFile)
       
       if (!textContent || textContent.length < 50) {
-        throw new Error('O PDF parece vazio ou é uma imagem. A IA não conseguirá ler.')
+        throw new Error('O PDF parece vazio ou ilegível.')
       }
 
-      toast.loading('A Norma está estudando o documento...', { id: toastId })
-      
-      const generateEmbedding = await pipeline('feature-extraction', 'Supabase/gte-small');
-      const output = await generateEmbedding(textContent, { pooling: 'mean', normalize: true });
-      const embedding = Array.from(output.data);
-
-      toast.loading('Enviando para a nuvem...', { id: toastId })
+      toast.loading('Enviando arquivo...', { id: toastId })
       const cleanName = sanitizeFileName(selectedFile.name)
       const fileName = `${profile.condominio_id}/${Date.now()}_${cleanName}`
 
@@ -139,34 +135,70 @@ export default function Biblioteca() {
         .from('biblioteca')
         .getPublicUrl(fileName)
 
-      const { error: dbError } = await supabase.from('documents').insert({
+      toast.loading('A Norma está indexando os tópicos...', { id: toastId })
+      const generateEmbedding = await pipeline('feature-extraction', 'Supabase/gte-small');
+      const chunks = splitTextIntoChunks(textContent);
+
+      const parentDoc = {
         title: selectedFile.name.replace('.pdf', ''),
         content: textContent,
-        embedding: embedding,
-        tags: `${categoryLabel.toLowerCase()} ${uploadCategory} pdf documento oficial`,
+        tags: `${categoryLabel.toLowerCase()} ${uploadCategory} pdf`,
         condominio_id: profile.condominio_id,
         metadata: {
           title: selectedFile.name,
           source: categoryLabel,
           category: uploadCategory,
-          url: publicUrl
+          url: publicUrl,
         }
-      })
+      }
 
-      if (dbError) throw dbError
+      const { data: parentData, error: parentError } = await supabase
+        .from('documents')
+        .insert(parentDoc)
+        .select()
+        .single()
 
-      const { error: comunicError } = await supabase.from('comunicados').insert({
+      if (parentError) throw parentError
+      
+      const chunkSize = 5;
+      let processed = 0;
+
+      for (let i = 0; i < chunks.length; i += chunkSize) {
+        const batch = chunks.slice(i, i + chunkSize);
+        const promises = batch.map(async (chunkText) => {
+           const output = await generateEmbedding(chunkText, { pooling: 'mean', normalize: true });
+           const embedding = Array.from(output.data);
+           
+           return {
+             title: `${selectedFile.name.replace('.pdf', '')} (Trecho)`,
+             content: chunkText,
+             embedding: embedding,
+             tags: `chunk ia_context ${uploadCategory}`,
+             condominio_id: profile.condominio_id,
+             metadata: {
+               source: categoryLabel,
+               category: uploadCategory,
+               is_chunk: true, 
+               parent_id: parentData.id 
+             }
+           }
+        });
+
+        await Promise.all(promises);
+        processed += batch.length;
+        toast.loading(`Indexando: ${processed}/${chunks.length} tópicos...`, { id: toastId });
+      }
+
+      await supabase.from('comunicados').insert({
         title: `Novo Documento: ${selectedFile.name.replace('.pdf', '')}`,
-        content: `Um novo arquivo foi adicionado à Biblioteca Digital na categoria **${categoryLabel}**. \n\nA Norma já leu e está pronta para tirar dúvidas sobre ele.`,
+        content: `Um novo arquivo foi adicionado à Biblioteca Digital na categoria **${categoryLabel}**.`,
         type: 'informativo', 
         priority: 1,
         author_id: user?.id,
         condominio_id: profile?.condominio_id
       })
 
-      if (comunicError) console.error("Erro ao criar comunicado:", comunicError)
-
-      toast.success('Documento salvo e aprendido!', { id: toastId })
+      toast.success('Documento indexado com sucesso!', { id: toastId })
       setIsModalOpen(false)
       setSelectedFile(null)
       loadDocs()
@@ -192,22 +224,9 @@ export default function Biblioteca() {
   if (loading) return <LoadingSpinner message="Carregando biblioteca..." />
 
   return (
-    <PageLayout 
-      title="Biblioteca Digital" 
-      subtitle="Acervo de documentos oficiais" 
-      icon="📚"
-      headerAction={
-        canManage ? (
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg font-bold hover:bg-white/30 transition text-sm flex items-center gap-2 border border-white/30"
-          >
-            <span className="text-lg">+</span> Novo Documento
-          </button>
-        ) : null
-      }
+    <PageLayout title="Biblioteca Digital" subtitle="Acervo de documentos oficiais" icon="📚"
+      headerAction={canManage ? (<button onClick={() => setIsModalOpen(true)} className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg font-bold hover:bg-white/30 transition text-sm flex items-center gap-2 border border-white/30"><span className="text-lg">+</span> Novo Documento</button>) : null}
     >
-      {/* Barra de Busca e Filtros */}
       <div className="mb-6 space-y-4">
         <div className="relative">
           <input type="text" placeholder="Buscar nos documentos..." className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary outline-none" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
@@ -221,124 +240,82 @@ export default function Biblioteca() {
         </div>
       </div>
 
-      {/* Lista de Documentos */}
       {filteredDocs.length > 0 ? (
         <div className="grid gap-4">
           {filteredDocs.map((doc) => {
             const category = CATEGORIAS_DOCS.find(c => c.id === doc.metadata?.category) || CATEGORIAS_DOCS[6]
             const isExpanded = expandedDocs.has(doc.id)
-            const topics = generateTopics(doc.content) // Gera tópicos para o resumo
+            
+            // Gera os tópicos para visualização (limita a 5 para não ficar gigante)
+            const topics = splitTextIntoChunks(doc.content).slice(0, 5);
 
             return (
               <div key={doc.id} className={`bg-white p-5 rounded-xl shadow-sm border border-gray-200 hover:border-primary transition-all duration-300 group relative overflow-hidden ${isExpanded ? 'ring-2 ring-primary ring-opacity-50' : ''}`}>
-                
-                {/* Header do Card */}
-                <div className="flex justify-between items-start mb-3">
+                <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-2">
-                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${category.color}`}>
-                      {category.icon} {category.label}
-                    </span>
+                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${category.color}`}>{category.icon} {category.label}</span>
                   </div>
                 </div>
-
-                <h3 className="text-lg font-bold text-gray-900 mb-4 line-clamp-2">{doc.title || doc.metadata?.title}</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-3 line-clamp-1">{doc.title || doc.metadata?.title}</h3>
                 
-                {/* CONTEÚDO CONDICIONAL */}
-                <div className={`transition-all duration-300`}>
-                  
+                <div className={`relative transition-all duration-300`}>
                   {isExpanded ? (
-                    // --- MODO EXPANDIDO ---
                     <div className="animate-fade-in">
-                       {/* Área de Texto Completo (com scroll se necessário, mas limitado para não quebrar a página) */}
+                       {/* Área de Texto Completo */}
                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 mb-4 max-h-96 overflow-y-auto custom-scrollbar">
-                         <p className="text-sm text-gray-700 leading-relaxed font-sans whitespace-pre-line">
-                           {doc.content}
-                         </p>
+                         <p className="text-sm text-gray-700 leading-relaxed font-sans whitespace-pre-line">{doc.content}</p>
                        </div>
-                       
-                       {/* Botão de Ação Principal */}
                        {doc.metadata?.url && (
-                          <a 
-                            href={doc.metadata.url} 
-                            target="_blank" 
-                            rel="noreferrer"
-                            className="w-full flex items-center justify-center gap-2 bg-primary text-white px-4 py-3.5 rounded-xl text-sm font-bold hover:bg-primary-dark transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                            Baixar / Visualizar PDF Original
+                          <a href={doc.metadata.url} target="_blank" rel="noreferrer" className="w-full flex items-center justify-center gap-2 bg-primary text-white px-4 py-3 rounded-lg text-sm font-bold hover:bg-primary-dark transition shadow-md mb-2">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> Abrir PDF Completo
                           </a>
                        )}
                     </div>
                   ) : (
-                    // --- MODO RESUMO (TÓPICOS) ---
+                    // --- MODO TÓPICOS RESUMIDOS ---
                     <div className="mb-2">
-                      <p className="text-xs font-bold text-gray-500 uppercase mb-2 tracking-wide">Resumo do conteúdo:</p>
-                      <ul className="space-y-2">
-                        {topics.map((topic, index) => (
-                          <li key={index} className="flex items-start gap-2 text-sm text-gray-600">
-                            <span className="text-primary mt-1">•</span>
-                            <span className="line-clamp-2">{topic}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      {/* Gradiente sutil para indicar que há mais */}
-                      <div className="h-4 bg-gradient-to-b from-transparent to-white opacity-50"></div>
+                      <p className="text-xs font-bold text-gray-500 uppercase mb-3 tracking-wide">Principais Tópicos:</p>
+                      <div className="space-y-2">
+                        {topics.map((topic, index) => {
+                          // Pega só o título do artigo/capítulo se possível, ou as primeiras palavras
+                          const topicTitle = topic.split('\n')[0].slice(0, 80);
+                          return (
+                            <div key={index} className="flex items-start gap-2 text-sm text-gray-700 bg-gray-50 p-2 rounded border border-gray-100">
+                                <span className="text-primary font-bold">•</span>
+                                <span className="line-clamp-1 font-medium">{topicTitle}...</span>
+                            </div>
+                          )
+                        })}
+                        {topics.length >= 5 && (
+                            <p className="text-xs text-gray-400 italic pl-2">+ outros tópicos no documento completo</p>
+                        )}
+                      </div>
+                      {/* Sombra inferior para dar profundidade */}
+                      <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-white to-transparent"></div>
                     </div>
                   )}
-
                 </div>
 
-                {/* Botão Toggle */}
-                <button 
-                  onClick={() => toggleExpand(doc.id)}
-                  className={`w-full py-2.5 mt-2 text-xs font-bold uppercase tracking-wider rounded-lg transition flex items-center justify-center gap-2
-                    ${isExpanded 
-                      ? 'text-gray-500 hover:bg-gray-50' 
-                      : 'text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10'}
-                  `}
-                >
-                  {isExpanded ? (
-                    <>Fechar Visualização <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg></>
-                  ) : (
-                    <>Leia Mais <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></>
-                  )}
+                <button onClick={() => toggleExpand(doc.id)} className="w-full py-2 mt-3 text-xs font-bold text-primary uppercase tracking-wider border border-primary/20 rounded-lg hover:bg-primary/5 transition flex items-center justify-center gap-2">
+                  {isExpanded ? (<>Recolher <svg className="w-3 h-3 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></>) : (<>Leia Mais & Acessar PDF <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></>)}
                 </button>
-
               </div>
             )
           })}
         </div>
       ) : (<EmptyState icon="📭" title="Nenhum documento" description="A biblioteca está vazia." />)}
 
+      {/* ... (Modal de Upload mantido igual) ... */}
       {canManage && isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-6"><h3 className="text-xl font-bold text-gray-900">Novo Documento</h3><button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button></div>
+              <div className="flex justify-between items-center mb-6"><h3 className="text-xl font-bold text-gray-900">Adicionar Documento</h3><button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button></div>
               <div className="space-y-4">
-                <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                  <p className="text-xs text-blue-800 flex items-start gap-2">
-                    <span className="text-lg">🧠</span>
-                    <strong>Inteligência Ativa:</strong> Ao enviar, a Norma lerá este documento automaticamente para responder dúvidas no chat.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Categoria</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {CATEGORIAS_DOCS.map((cat) => (
-                      <button key={cat.id} onClick={() => setUploadCategory(cat.id)} className={`text-xs font-semibold py-2 px-3 rounded-lg border text-left flex items-center gap-2 transition ${uploadCategory === cat.id ? `${cat.color} border-current ring-1 ring-current` : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}><span>{cat.icon}</span> {cat.label}</button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Arquivo PDF</label>
-                  <input type="file" accept=".pdf" ref={fileInputRef} className="hidden" onChange={onFileSelect} />
-                  <div onClick={() => fileInputRef.current?.click()} className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition ${selectedFile ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-primary hover:bg-gray-50'}`}>
-                    {selectedFile ? (<div className="text-green-700"><div className="text-2xl mb-1">📄</div><p className="font-bold text-sm truncate">{selectedFile.name}</p></div>) : (<div className="text-gray-500"><div className="text-2xl mb-1">📤</div><p className="font-medium text-sm">Toque para selecionar PDF</p></div>)}
-                  </div>
-                </div>
-                <button onClick={handleUpload} disabled={!selectedFile || uploading} className="w-full bg-primary text-white py-3.5 rounded-xl font-bold shadow-lg hover:bg-primary-dark transition disabled:opacity-50">{uploading ? 'Processando...' : 'Enviar Documento'}</button>
+                <div className="bg-purple-50 border border-purple-100 p-3 rounded-lg"><p className="text-xs text-purple-700 font-medium flex items-start gap-2"><span className="text-base">🤖</span>O conteúdo será fatiado em tópicos para a Norma aprender com precisão.</p></div>
+                <div><label className="block text-sm font-bold text-gray-700 mb-2">Categoria</label><div className="grid grid-cols-2 gap-2">{CATEGORIAS_DOCS.map((cat) => (<button key={cat.id} onClick={() => setUploadCategory(cat.id)} className={`text-xs font-semibold py-2 px-3 rounded-lg border text-left flex items-center gap-2 transition ${uploadCategory === cat.id ? `${cat.color} border-current ring-1 ring-current` : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}><span>{cat.icon}</span> {cat.label}</button>))}</div></div>
+                <div><label className="block text-sm font-bold text-gray-700 mb-2">Arquivo PDF</label><input type="file" accept=".pdf" ref={fileInputRef} className="hidden" onChange={onFileSelect} /><div onClick={() => fileInputRef.current?.click()} className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition ${selectedFile ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-primary hover:bg-gray-50'}`}>{selectedFile ? (<div className="text-green-700"><div className="text-2xl mb-1">📄</div><p className="font-bold text-sm truncate">{selectedFile.name}</p></div>) : (<div className="text-gray-500"><div className="text-2xl mb-1">📤</div><p className="font-medium text-sm">Clique para selecionar PDF</p></div>)}</div></div>
+                <button onClick={handleUpload} disabled={!selectedFile || uploading} className="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-lg hover:bg-primary-dark transition disabled:opacity-50">{uploading ? 'Processando Inteligência...' : 'Enviar e Ensinar Norma'}</button>
               </div>
             </div>
           </div>
