@@ -105,6 +105,10 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
 
     try {
       // CHAMADA PARA A NOVA EDGE FUNCTION (GEMINI)
+      // Esta função no backend cuida de:
+      // 1. Gerar embedding da pergunta
+      // 2. Buscar documentos relevantes no banco
+      // 3. Enviar contexto + pergunta para o Gemini gerar a resposta final
       const { data, error } = await supabase.functions.invoke('ask-ai', {
         body: { 
           query: textToSend,
@@ -115,10 +119,10 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
 
       if (error) throw error
 
-      // A resposta agora vem gerada pelo Gemini, não é mais um trecho cru
+      // A resposta agora é gerada pela IA (data.answer), não um trecho cru
       const botResponse = data.answer || "Desculpe, não consegui processar sua resposta agora."
 
-      const notFoundKeywords = ["não encontrei", "não consta", "não localizei"];
+      const notFoundKeywords = ["não encontrei", "não consta", "não localizei", "desculpe"];
       const seemsNotFound = notFoundKeywords.some(kw => botResponse.toLowerCase().includes(kw));
 
       const options: ChatOption[] | undefined = seemsNotFound ? [
