@@ -4,20 +4,25 @@ import { versixTheme } from '../../config/theme-versix'
 
 export default function AdminSidebar({ onClose }: { onClose?: () => void }) {
   const location = useLocation()
-  const { signOut, isAdmin } = useAuth()
+  const { signOut, isAdmin, isSindico } = useAuth() // Importando isSindico
   
   const isActive = (path: string) => location.pathname === path
 
+  // Definição do menu com lógica de permissões
   const menuItems = [
-    { path: '/admin', label: 'Visão Geral', icon: '📊' },
+    { path: '/admin', label: 'Visão Geral', icon: '📊', show: true },
+    
     // Apenas Super Admins devem ver a gestão de condomínios (Multi-tenant)
-    ...(isAdmin ? [{ path: '/admin/condominios', label: 'Condomínios', icon: '🏢' }] : []),
-    { path: '/admin/usuarios', label: 'Gestão de Acesso', icon: '👥' },
-    { path: '/admin/ocorrencias', label: 'Ocorrências', icon: '🚨' },
-    { path: '/admin/comunicados', label: 'Comunicados', icon: '📢' },
-    { path: '/admin/votacoes', label: 'Assembleia', icon: '🗳️' },
-    { path: '/admin/financeiro', label: 'Financeiro', icon: '💰' },
-    ...(isAdmin ? [{ path: '/admin/ia', label: 'Treinar IA', icon: '🧠' }] : []),
+    { path: '/admin/condominios', label: 'Condomínios', icon: '🏢', show: isAdmin },
+    
+    { path: '/admin/usuarios', label: 'Gestão de Acesso', icon: '👥', show: true },
+    { path: '/admin/ocorrencias', label: 'Ocorrências', icon: '🚨', show: true },
+    { path: '/admin/comunicados', label: 'Comunicados', icon: '📢', show: true },
+    { path: '/admin/votacoes', label: 'Assembleia', icon: '🗳️', show: true },
+    { path: '/admin/financeiro', label: 'Financeiro', icon: '💰', show: true },
+    
+    // Inteligência Artificial (Admin e Síndico podem ver)
+    { path: '/admin/ia', label: 'Base de Conhecimento', icon: '🧠', show: isAdmin || isSindico },
   ]
 
   return (
@@ -35,7 +40,7 @@ export default function AdminSidebar({ onClose }: { onClose?: () => void }) {
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-        {menuItems.map((item) => {
+        {menuItems.filter(item => item.show).map((item) => {
           const active = isActive(item.path)
           return (
             <Link
