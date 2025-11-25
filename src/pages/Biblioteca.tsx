@@ -45,16 +45,40 @@ function sanitizeFileName(name: string) {
     .toLowerCase()
 }
 
-// Função de fragmentação (Reutilizada para visualização)
-function splitTextIntoChunks(text: string): string[] {
-  const cleanText = text.replace(/--- PAGE \d+ ---/g, '');
-  const splitRegex = /(?=\n\s*(?:Artigo|Art\.|CAPÍTULO|Secção)\s+[\dIVX]+)/i;
-  const rawChunks = cleanText.split(splitRegex);
-  const chunks = rawChunks.map(c => c.trim()).filter(c => c.length > 30); // Filtro levemente ajustado
+// --- FUNÇÃO DE FRAGMENTAÇÃO OTIMIZADA ---
+function splitTextIntoChunks(text: string, docTitle: string): string[] {
+  // 1. Limpeza Pesada: Remove cabeçalhos/rodapés de página repetitivos
+  let cleanText = text
+    .replace(/--- PAGE \d+ ---/g, '') // Remove marcador de página do extrator
+    .replace(/REGIMENTO INTERNO\s+PINHEIRO PARK/gi, '') // Remove título repetitivo (exemplo)
+    .replace(/\s+/g, ' ') // Normaliza espaços e quebras de linha
+    .trim();
 
+  // 2. Regex melhorada para Artigos, Capítulos e Cláusulas
+  // Captura o divisor mas mantém ele no texto (lookahead)
+  const splitRegex = /(?=(?:CAPÍTULO|TITULO|SEÇÃO|Artigo|Art\.|CLÁUSULA)\s+[\dIVX]+)/i;
+  
+  const rawChunks = cleanText.split(splitRegex);
+  
+  // 3. Processamento dos Chunks
+  const chunks = rawChunks
+    .map(c => c.trim())
+    .filter(c => c.length > 30) // Remove fragmentos muito curtos (ruídos)
+    .map(c => {
+        // ADICIONA CONTEXTO: Prepend o título do documento em cada fragmento
+        // Isso ajuda a IA a saber que "Artigo 5" pertence ao "Regimento Interno"
+        return `Documento: ${docTitle}. ${c}`;
+    });
+
+  // Fallback para textos sem estrutura clara
   if (chunks.length <= 1) {
-    // Se não achou artigos, tenta quebrar por parágrafos duplos ou pontos finais
-    return cleanText.split(/\n\n+/).filter(s => s.length > 50).slice(0, 5);
+    const fixedSizeChunks = [];
+    // Blocos menores (500 chars) para precisão
+    for (let i = 0; i < cleanText.length; i += 500) {
+      // Adiciona contexto também no fallback
+      fixedSizeChunks.push(`Documento: ${docTitle}. ${cleanText.slice(i, i + 500)}`);
+    }
+    return fixedSizeChunks;
   }
 
   return chunks;
@@ -113,7 +137,8 @@ export default function Biblioteca() {
 
     try {
       const categoryLabel = CATEGORIAS_DOCS.find(c => c.id === uploadCategory)?.label || 'Documento'
-      
+      const docTitle = selectedFile.name.replace('.pdf', '');
+
       toast.loading('Lendo conteúdo do PDF...', { id: toastId })
       const textContent = await extractTextFromPDF(selectedFile)
       
@@ -137,10 +162,14 @@ export default function Biblioteca() {
 
       toast.loading('A Norma está indexando os tópicos...', { id: toastId })
       const generateEmbedding = await pipeline('feature-extraction', 'Supabase/gte-small');
-      const chunks = splitTextIntoChunks(textContent);
+      
+      // CHUNKING OTIMIZADO
+      const chunks = splitTextIntoChunks(textContent, docTitle);
+      console.log(`Gerados ${chunks.length} fragmentos com contexto.`);
 
+      // Documento Pai
       const parentDoc = {
-        title: selectedFile.name.replace('.pdf', ''),
+        title: docTitle,
         content: textContent,
         tags: `${categoryLabel.toLowerCase()} ${uploadCategory} pdf`,
         condominio_id: profile.condominio_id,
@@ -160,6 +189,7 @@ export default function Biblioteca() {
 
       if (parentError) throw parentError
       
+      // Processamento dos Chunks
       const chunkSize = 5;
       let processed = 0;
 
@@ -169,9 +199,13 @@ export default function Biblioteca() {
            const output = await generateEmbedding(chunkText, { pooling: 'mean', normalize: true });
            const embedding = Array.from(output.data);
            
+           // Remove o prefixo de contexto "Documento: ..." para a exibição no banco se quiser economizar espaço, 
+           // mas é melhor manter para consistência se for ler depois.
+           // Vamos salvar o texto COMPLETO (com contexto) para garantir.
+           
            return {
-             title: `${selectedFile.name.replace('.pdf', '')} (Trecho)`,
-             content: chunkText,
+             title: `${docTitle} (Trecho)`,
+             content: chunkText, // Conteúdo com contexto embutido
              embedding: embedding,
              tags: `chunk ia_context ${uploadCategory}`,
              condominio_id: profile.condominio_id,
@@ -185,13 +219,17 @@ export default function Biblioteca() {
         });
 
         await Promise.all(promises);
+        const records = await Promise.all(promises);
+        const { error: chunkError } = await supabase.from('documents').insert(records);
+        if(chunkError) console.error(chunkError);
+        
         processed += batch.length;
         toast.loading(`Indexando: ${processed}/${chunks.length} tópicos...`, { id: toastId });
       }
 
       await supabase.from('comunicados').insert({
-        title: `Novo Documento: ${selectedFile.name.replace('.pdf', '')}`,
-        content: `Um novo arquivo foi adicionado à Biblioteca Digital na categoria **${categoryLabel}**.`,
+        title: `Novo Documento: ${docTitle}`,
+        content: `Um novo arquivo foi adicionado à Biblioteca Digital na categoria **${categoryLabel}**. \n\nA Norma aprendeu ${chunks.length} novos tópicos deste documento.`,
         type: 'informativo', 
         priority: 1,
         author_id: user?.id,
@@ -221,6 +259,13 @@ export default function Biblioteca() {
       if (e.target.files && e.target.files[0]) setSelectedFile(e.target.files[0])
   }
 
+  // Helper para resumo visual (para o documento Pai)
+  const getSummary = (text: string) => {
+     // Tenta limpar o cabeçalho de página repetitivo antes de resumir
+     const clean = text.replace(/--- PAGE \d+ ---/g, '').replace(/\s+/g, ' ').trim();
+     return clean.slice(0, 150) + '...'
+  }
+
   if (loading) return <LoadingSpinner message="Carregando biblioteca..." />
 
   return (
@@ -246,9 +291,10 @@ export default function Biblioteca() {
             const category = CATEGORIAS_DOCS.find(c => c.id === doc.metadata?.category) || CATEGORIAS_DOCS[6]
             const isExpanded = expandedDocs.has(doc.id)
             
-            // Gera os tópicos para visualização (limita a 5 para não ficar gigante)
-            const topics = splitTextIntoChunks(doc.content).slice(0, 5);
-
+            // Para visualização, usamos o documento completo, mas processado
+            // Usamos a função de split SEM o título injetado para ficar bonito na tela
+            const rawChunks = splitTextIntoChunks(doc.content, '').slice(0, 5);
+            
             return (
               <div key={doc.id} className={`bg-white p-5 rounded-xl shadow-sm border border-gray-200 hover:border-primary transition-all duration-300 group relative overflow-hidden ${isExpanded ? 'ring-2 ring-primary ring-opacity-50' : ''}`}>
                 <div className="flex justify-between items-start mb-2">
@@ -257,11 +303,9 @@ export default function Biblioteca() {
                   </div>
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-3 line-clamp-1">{doc.title || doc.metadata?.title}</h3>
-                
                 <div className={`relative transition-all duration-300`}>
                   {isExpanded ? (
                     <div className="animate-fade-in">
-                       {/* Área de Texto Completo */}
                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 mb-4 max-h-96 overflow-y-auto custom-scrollbar">
                          <p className="text-sm text-gray-700 leading-relaxed font-sans whitespace-pre-line">{doc.content}</p>
                        </div>
@@ -272,13 +316,12 @@ export default function Biblioteca() {
                        )}
                     </div>
                   ) : (
-                    // --- MODO TÓPICOS RESUMIDOS ---
                     <div className="mb-2">
                       <p className="text-xs font-bold text-gray-500 uppercase mb-3 tracking-wide">Principais Tópicos:</p>
                       <div className="space-y-2">
-                        {topics.map((topic, index) => {
-                          // Pega só o título do artigo/capítulo se possível, ou as primeiras palavras
-                          const topicTitle = topic.split('\n')[0].slice(0, 80);
+                        {rawChunks.map((topic, index) => {
+                          const topicClean = topic.replace(/^Documento:.*?\.\s*/, ''); // Remove o contexto visualmente
+                          const topicTitle = topicClean.split('\n')[0].slice(0, 80);
                           return (
                             <div key={index} className="flex items-start gap-2 text-sm text-gray-700 bg-gray-50 p-2 rounded border border-gray-100">
                                 <span className="text-primary font-bold">•</span>
@@ -286,16 +329,12 @@ export default function Biblioteca() {
                             </div>
                           )
                         })}
-                        {topics.length >= 5 && (
-                            <p className="text-xs text-gray-400 italic pl-2">+ outros tópicos no documento completo</p>
-                        )}
+                        {rawChunks.length >= 5 && (<p className="text-xs text-gray-400 italic pl-2">+ outros tópicos no documento completo</p>)}
                       </div>
-                      {/* Sombra inferior para dar profundidade */}
                       <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-white to-transparent"></div>
                     </div>
                   )}
                 </div>
-
                 <button onClick={() => toggleExpand(doc.id)} className="w-full py-2 mt-3 text-xs font-bold text-primary uppercase tracking-wider border border-primary/20 rounded-lg hover:bg-primary/5 transition flex items-center justify-center gap-2">
                   {isExpanded ? (<>Recolher <svg className="w-3 h-3 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></>) : (<>Leia Mais & Acessar PDF <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></>)}
                 </button>
@@ -305,7 +344,6 @@ export default function Biblioteca() {
         </div>
       ) : (<EmptyState icon="📭" title="Nenhum documento" description="A biblioteca está vazia." />)}
 
-      {/* ... (Modal de Upload mantido igual) ... */}
       {canManage && isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
