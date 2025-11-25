@@ -40,7 +40,7 @@ function sanitizeFileName(name: string) {
 }
 
 export default function Biblioteca() {
-  const { profile, canManage } = useAuth()
+  const { profile, canManage, user } = useAuth()
   const [docs, setDocs] = useState<Documento[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
@@ -87,7 +87,7 @@ export default function Biblioteca() {
   }
 
   const handleUpload = async () => {
-    if (!selectedFile || !profile?.condominio_id || !canManage) return
+    if (!selectedFile || !profile?.condominio_id || !canManage || !user) return
 
     setUploading(true)
     try {
@@ -123,7 +123,24 @@ export default function Biblioteca() {
 
       if (dbError) throw dbError
 
-      alert('Documento salvo!')
+      // --- NOVO: CRIAR COMUNICADO AUTOMÁTICO ---
+      // Isso garante que apareça no feed e dispare notificação (via trigger ou webhook do Supabase)
+      const { error: comunicError } = await supabase.from('comunicados').insert({
+        title: `Novo Documento: ${selectedFile.name.replace('.pdf', '')}`,
+        content: `Um novo arquivo foi adicionado à Biblioteca Digital na categoria **${categoryLabel}**. \n\nAcesse a biblioteca para visualizar ou baixar o documento completo.`,
+        type: 'informativo', // Usa um tipo existente para garantir compatibilidade
+        priority: 1,
+        author_id: user.id,
+        condominio_id: profile.condominio_id
+      })
+
+      if (comunicError) {
+        console.error("Erro ao criar comunicado automático:", comunicError)
+        // Não falhamos o upload se o comunicado falhar, apenas logamos
+      }
+      // -----------------------------------------
+
+      alert('Documento salvo e publicado no mural!')
       setIsModalOpen(false)
       setSelectedFile(null)
       loadDocs()
