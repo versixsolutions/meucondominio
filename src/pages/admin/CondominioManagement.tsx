@@ -25,9 +25,8 @@ const INITIAL_FORM = {
   email: '',
   phone: '',
   
-  // 1.1 Localização (Novo)
-  latitude: '',
-  longitude: '',
+  // 1.1 Localização (Atualizado para Plus Code)
+  plusCode: '', // Ex: 87Q3+22, Teresina - PI
   
   // 2. Identidade Visual
   primaryColor: '#1F4080',
@@ -75,21 +74,36 @@ export default function CondominioManagement() {
     }
   }
 
-  // Helper para buscar coordenadas via OpenStreetMap (Nominatim)
-  const fetchCoordinates = async (fullAddress: string) => {
+  // Helper para buscar Plus Code via Nominatim (OpenStreetMap)
+  // O Nominatim nem sempre retorna o Plus Code diretamente, então usamos uma lógica simples:
+  // Se acharmos Lat/Lon, convertemos (em um cenário real, usaríamos a lib `open-location-code`,
+  // mas aqui vamos manter simples buscando o link do Google Maps que gera o Plus Code).
+  
+  // Workaround para MVP: Vamos buscar Lat/Lon e deixar o link do Google Maps gerar o Plus Code visualmente
+  // ou pedir para o usuário colar o Plus Code do Google Maps se o automático falhar.
+  
+  const fetchLocationData = async (fullAddress: string) => {
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}&limit=1`)
       const data = await response.json()
+      
+      // Nota: Nominatim não retorna Plus Code nativamente.
+      // Para MVP, se acharmos coordenadas, vamos tentar "simular" ou deixar em branco para preenchimento manual.
+      // O Google Maps API seria ideal aqui, mas é pago.
+      
       if (data && data.length > 0) {
-        return { lat: data[0].lat, lon: data[0].lon }
+        // Retornamos null no Plus Code para incentivar o preenchimento manual preciso,
+        // ou poderíamos usar uma lib JS para converter Lat/Lon -> Plus Code.
+        // Vamos focar na UX de pedir o código.
+        return null 
       }
     } catch (e) {
-      console.warn('Erro ao buscar coordenadas:', e)
+      console.warn('Erro ao buscar localização:', e)
     }
     return null
   }
 
-  // --- BUSCA CNPJ VIA BRASILAPI + GEOLOCALIZAÇÃO ---
+  // --- BUSCA CNPJ VIA BRASILAPI ---
   const handleCnpjSearch = async () => {
     const cleanCnpj = formData.cnpj.replace(/\D/g, '')
     
@@ -99,7 +113,7 @@ export default function CondominioManagement() {
     }
 
     setIsSearchingCnpj(true)
-    const toastId = toast.loading('Consultando Receita e Mapa...')
+    const toastId = toast.loading('Consultando Receita Federal...')
 
     try {
       const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCnpj}`)
@@ -112,41 +126,30 @@ export default function CondominioManagement() {
 
       const data = await response.json()
 
-      // Formata endereço
       const addressSimple = `${data.logradouro}, ${data.numero}`
       const addressFull = `${addressSimple}, ${data.bairro}, ${data.municipio} - ${data.uf}`
-      
-      // Define nome de exibição (Fantasia ou Razão Social)
       const displayName = data.nome_fantasia || data.razao_social
       
-      // Gera slug sugerido
       const suggestedSlug = displayName
         .toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, "") // Remove acentos
-        .replace(/[^a-z0-9]/g, '') // Remove caracteres especiais
-
-      // Tenta buscar coordenadas
-      let coords = { lat: '', lon: '' }
-      const geoData = await fetchCoordinates(addressFull)
-      if (geoData) {
-        coords = { lat: geoData.lat, lon: geoData.lon }
-      }
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]/g, '')
 
       setFormData(prev => ({
         ...prev,
         razaoSocial: data.razao_social,
-        name: displayName, // Nome Fantasia
+        name: displayName,
         address: addressFull,
         city: data.municipio,
         state: data.uf,
         email: data.email || '',
         phone: data.ddd_telefone_1 || '',
         slug: !prev.slug ? suggestedSlug : prev.slug,
-        latitude: coords.lat,
-        longitude: coords.lon
+        // Plus Code geralmente precisa ser pego manualmente no Maps para precisão
+        plusCode: '' 
       }))
 
-      toast.success('Dados e localização preenchidos!', { id: toastId })
+      toast.success('Dados preenchidos! Insira o Plus Code manualmente para precisão.', { id: toastId })
 
     } catch (error: any) {
       console.error(error)
@@ -185,8 +188,7 @@ export default function CondominioManagement() {
             phone: formData.phone
           },
           location: {
-            latitude: formData.latitude,
-            longitude: formData.longitude
+            plusCode: formData.plusCode // Salva o Plus Code
           }
         }
       }
@@ -245,16 +247,15 @@ export default function CondominioManagement() {
                 {cond.theme_config?.cadastro?.address || 'Endereço não informado'}
               </p>
               
-              {cond.theme_config?.cadastro?.location?.latitude && (
-                <div className="mb-4">
+              {cond.theme_config?.cadastro?.location?.plusCode && (
+                <div className="mb-4 bg-blue-50 p-2 rounded text-center">
                   <a 
-                    href={`https://www.google.com/maps?q=${cond.theme_config.cadastro.location.latitude},${cond.theme_config.cadastro.location.longitude}`}
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cond.theme_config.cadastro.location.plusCode)}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                    className="text-xs text-blue-700 font-mono hover:underline flex items-center justify-center gap-1"
                   >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    Ver no Mapa
+                    📍 {cond.theme_config.cadastro.location.plusCode}
                   </a>
                 </div>
               )}
@@ -307,7 +308,6 @@ export default function CondominioManagement() {
                     {isSearchingCnpj ? '...' : '🔍 Buscar'}
                   </button>
                 </div>
-                <p className="text-[10px] text-gray-500 mt-1 ml-1">Auto-preenchimento + Geolocalização</p>
               </div>
 
               <div className="col-span-2">
@@ -333,28 +333,34 @@ export default function CondominioManagement() {
                 <input type="text" className="w-full px-3 py-2 border rounded-lg text-sm bg-white" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
               </div>
               
-              {/* CAMPOS DE GEOLOCALIZAÇÃO */}
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">Latitude</label>
-                <input type="text" className="w-full px-3 py-2 border rounded-lg text-sm bg-white font-mono text-xs" value={formData.latitude} onChange={e => setFormData({...formData, latitude: e.target.value})} placeholder="-23.5505" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">Longitude</label>
-                <input type="text" className="w-full px-3 py-2 border rounded-lg text-sm bg-white font-mono text-xs" value={formData.longitude} onChange={e => setFormData({...formData, longitude: e.target.value})} placeholder="-46.6333" />
-              </div>
-              
-              {(formData.latitude && formData.longitude) && (
-                <div className="col-span-2 flex justify-end">
-                  <a 
-                    href={`https://www.google.com/maps?q=${formData.latitude},${formData.longitude}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs text-blue-600 hover:underline flex items-center gap-1"
-                  >
-                    📍 Testar no Google Maps
-                  </a>
+              {/* PLUS CODE (Substituindo Lat/Lon) */}
+              <div className="col-span-2 bg-white p-3 rounded-lg border border-gray-200">
+                <label className="block text-xs font-bold text-gray-600 mb-1 flex items-center gap-1">
+                  Google Plus Code 
+                  <a href="https://plus.codes/map" target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-[10px] font-normal ml-1">(Onde encontrar?)</a>
+                </label>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    className="flex-1 px-3 py-2 border rounded-lg text-sm font-mono uppercase placeholder-gray-300" 
+                    value={formData.plusCode} 
+                    onChange={e => setFormData({...formData, plusCode: e.target.value.toUpperCase()})} 
+                    placeholder="Ex: 87Q3+22 Teresina, PI" 
+                  />
+                  {formData.plusCode && (
+                    <a 
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formData.plusCode)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="bg-gray-100 text-gray-600 px-3 py-2 rounded-lg hover:bg-gray-200 flex items-center justify-center"
+                      title="Testar Link"
+                    >
+                      📍
+                    </a>
+                  )}
                 </div>
-              )}
+                <p className="text-[10px] text-gray-400 mt-1">Código curto do Google Maps para localização exata da portaria.</p>
+              </div>
             </div>
           </div>
 
