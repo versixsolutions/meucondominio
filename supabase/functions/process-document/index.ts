@@ -1,19 +1,23 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { QdrantClient } from '../_shared/qdrant.ts'
-import { generateEmbeddings } from '../_shared/embeddings.ts'
-import { splitMarkdownIntoChunks } from '../_shared/chunking.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 serve(async (req: Request) => {
+  // CRÍTICO: Sempre responder OPTIONS primeiro
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { 
+      headers: corsHeaders,
+      status: 200 
+    })
   }
 
   try {
+    console.log('📥 Requisição recebida')
+    
     const formData = await req.formData()
     const file = formData.get('file') as File
     const condominioId = formData.get('condominio_id') as string
@@ -23,14 +27,17 @@ serve(async (req: Request) => {
       throw new Error('Nenhum arquivo enviado')
     }
 
-    console.log(`📄 Processando: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`)
+    console.log(`📄 Arquivo: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`)
 
     // ===== PASSO 1: PROCESSAR PDF COM LLAMAPARSE =====
     const LLAMAPARSE_API_KEY = Deno.env.get('LLAMAPARSE_API_KEY')
     
     if (!LLAMAPARSE_API_KEY) {
-      throw new Error('LLAMAPARSE_API_KEY não configurada')
+      console.error('❌ LLAMAPARSE_API_KEY não configurada')
+      throw new Error('Configuração incompleta: LLAMAPARSE_API_KEY ausente')
     }
+
+    console.log('📤 Enviando para LlamaParse...')
 
     const parseFormData = new FormData()
     parseFormData.append('file', file)
@@ -46,13 +53,17 @@ serve(async (req: Request) => {
     })
 
     if (!parseResponse.ok) {
-      throw new Error(`LlamaParse falhou: ${await parseResponse.text()}`)
+      const errorText = await parseResponse.text()
+      console.error('❌ LlamaParse Error:', errorText)
+      throw new Error(`LlamaParse falhou: ${errorText}`)
     }
 
     const parseData = await parseResponse.json()
     const jobId = parseData.id
 
-    // Aguardar processamento
+    console.log(`⏳ Job ID: ${jobId} - Aguardando processamento...`)
+
+    // Aguardar processamento (máximo 60 segundos)
     let markdown = ''
     let attempts = 0
     const maxAttempts = 30
@@ -60,81 +71,64 @@ serve(async (req: Request) => {
     while (attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 2000)) // 2 segundos
 
-      const resultResponse = await fetch(`https://api.cloud.llamaindex.ai/api/parsing/job/${jobId}/result/markdown`, {
-        headers: {
-          'Authorization': `Bearer ${LLAMAPARSE_API_KEY}`
+      const resultResponse = await fetch(
+        `https://api.cloud.llamaindex.ai/api/parsing/job/${jobId}/result/markdown`,
+        {
+          headers: {
+            'Authorization': `Bearer ${LLAMAPARSE_API_KEY}`
+          }
         }
-      })
+      )
 
       if (resultResponse.ok) {
         const result = await resultResponse.json()
         markdown = result.markdown
+        console.log('✅ Markdown extraído')
         break
       }
 
       attempts++
-      console.log(`⏳ Aguardando processamento... (${attempts}/${maxAttempts})`)
+      console.log(`⏳ Tentativa ${attempts}/${maxAttempts}`)
     }
 
     if (!markdown || markdown.length < 50) {
-      throw new Error('Falha ao extrair texto do PDF')
+      throw new Error('Falha ao extrair texto do PDF após timeout')
     }
 
-    console.log(`✅ PDF processado: ${markdown.length} caracteres`)
-
-    // ===== PASSO 2: QUEBRAR EM CHUNKS =====
-    const chunks = splitMarkdownIntoChunks(markdown, file.name)
-    console.log(`📦 Gerados ${chunks.length} chunks`)
-
-    // ===== PASSO 3: GERAR EMBEDDINGS =====
-    const texts = chunks.map(c => c.content)
-    const embeddings = await generateEmbeddings(texts)
-    console.log(`🧮 Gerados ${embeddings.length} embeddings`)
-
-    // ===== PASSO 4: INDEXAR NO QDRANT =====
-    const qdrant = new QdrantClient()
-    const timestamp = Date.now()
-
-    const points = chunks.map((chunk, i) => ({
-      id: `${condominioId}-${timestamp}-${i}`,
-      vector: embeddings[i],
-      payload: {
-        content: chunk.content,
-        title: file.name,
-        condominio_id: condominioId,
-        category: category,
-        chunk_number: chunk.metadata.chunk_number,
-        total_chunks: chunks.length,
-        created_at: new Date().toISOString()
-      }
-    }))
-
-    await qdrant.upsertPoints(points)
-    console.log(`✅ ${points.length} pontos indexados no Qdrant`)
+    console.log(`📝 Texto extraído: ${markdown.length} caracteres`)
 
     // ===== RETORNAR RESULTADO =====
     return new Response(
       JSON.stringify({
         success: true,
         markdown: markdown,
-        chunks_created: chunks.length,
-        file_name: file.name
+        file_name: file.name,
+        message: 'PDF processado com sucesso'
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        },
+        status: 200
       }
     )
 
   } catch (error: any) {
-    console.error('❌ Erro:', error)
+    console.error('❌ Erro completo:', error)
+    
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message
+        error: error.message,
+        details: error.toString()
       }),
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        }
       }
     )
   }
