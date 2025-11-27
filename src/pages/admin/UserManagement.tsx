@@ -35,7 +35,6 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'pending' | 'active'>('pending')
   const [processingId, setProcessingId] = useState<string | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<UserData | null>(null)
@@ -67,6 +66,8 @@ export default function UserManagement() {
   async function handleApprove(id: string) {
     if (!confirm('Confirmar aprovação deste morador?')) return
     setProcessingId(id)
+    const toastId = toast.loading('Aprovando...')
+
     try {
       const { error } = await supabase
         .from('users')
@@ -75,23 +76,23 @@ export default function UserManagement() {
 
       if (error) throw error
       setUsers(prev => prev.map(u => u.id === id ? { ...u, role: 'morador' } : u))
-      toast.success('Usuário aprovado!')
+      toast.success('Usuário aprovado!', { id: toastId })
     } catch (error: any) {
-      toast.error('Erro: ' + error.message)
+      toast.error('Erro: ' + error.message, { id: toastId })
     } finally {
       setProcessingId(null)
     }
   }
 
-  // NOVO: Função de Delete Hard (Chama Edge Function)
+  // Lógica de Exclusão Definitiva (Hard Delete)
   async function handleDeleteUser(id: string) {
-    if (!confirm('ATENÇÃO: Isso excluirá PERMANENTEMENTE o usuário do sistema e todos os seus dados vinculados (login, perfil, histórico). Esta ação é irreversível. Tem certeza?')) return
+    if (!confirm('ATENÇÃO: Isso excluirá PERMANENTEMENTE o usuário e todos os seus dados (login, perfil, histórico). Tem certeza?')) return
 
-    setIsDeleting(true)
     setProcessingId(id)
     const toastId = toast.loading('Excluindo usuário...')
 
     try {
+      // Chama a Edge Function para deletar do Auth (que cascateia para o DB)
       const { data, error } = await supabase.functions.invoke('delete-user', {
         body: { userId: id }
       })
@@ -99,20 +100,29 @@ export default function UserManagement() {
       if (error) throw error
       if (data?.error) throw new Error(data.error)
 
+      // Remove da lista local
       setUsers(prev => prev.filter(u => u.id !== id))
-      toast.success('Usuário deletado com sucesso!', { id: toastId })
+      toast.success('Usuário excluído com sucesso!', { id: toastId })
 
     } catch (error: any) {
       console.error('Erro ao deletar:', error)
-      toast.error('Falha ao deletar: ' + error.message, { id: toastId })
+      // Fallback: Se a Edge Function falhar (ex: configuração), tenta deletar só do banco público
+      // Isso deixa um "usuário fantasma" no Auth, mas limpa a tela do admin.
+      if (confirm('A exclusão completa falhou. Deseja forçar a remoção apenas do painel (o login pode permanecer)?')) {
+          const { error: dbError } = await supabase.from('users').delete().eq('id', id)
+          if (!dbError) {
+              setUsers(prev => prev.filter(u => u.id !== id))
+              toast.success('Removido do painel (Soft Delete).', { id: toastId })
+          } else {
+              toast.error('Falha total na exclusão.', { id: toastId })
+          }
+      } else {
+          toast.error('Erro: ' + error.message, { id: toastId })
+      }
     } finally {
-      setIsDeleting(false)
       setProcessingId(null)
     }
   }
-
-  // Função antiga de Reject (apenas deletava da tabela public, não do Auth - agora substituída ou mantida como "soft delete" se preferir, mas recomendo usar o hard delete para limpeza real)
-  // Vamos substituir o botão de "Rejeitar" (X vermelho) para usar o handleDeleteUser também, pois se rejeitou, o cadastro está errado e deve sumir do Auth para liberar o email.
 
   function openEditModal(targetUser: UserData) {
     if (!isAdmin && targetUser.role === 'admin') {
@@ -133,6 +143,8 @@ export default function UserManagement() {
     }
 
     setProcessingId(editingUser.id)
+    const toastId = toast.loading('Salvando alterações...')
+    
     try {
       const { error } = await supabase
         .from('users')
@@ -149,10 +161,10 @@ export default function UserManagement() {
       setUsers(prev => prev.map(u => u.id === editingUser.id ? editingUser : u))
       setIsEditModalOpen(false)
       setEditingUser(null)
-      toast.success('Dados atualizados!')
+      toast.success('Dados atualizados!', { id: toastId })
 
     } catch (error: any) {
-      toast.error('Erro ao salvar: ' + error.message)
+      toast.error('Erro ao salvar: ' + error.message, { id: toastId })
     } finally {
       setProcessingId(null)
     }
@@ -219,12 +231,11 @@ export default function UserManagement() {
                     <td className="px-6 py-4 text-right">
                       {user.role === 'pending' ? (
                         <div className="flex justify-end gap-2">
-                          {/* Botão Rejeitar agora faz DELETE TOTAL */}
                           <button 
                             onClick={() => handleDeleteUser(user.id)} 
                             disabled={processingId === user.id}
-                            className="text-red-600 hover:bg-red-50 p-2 rounded border border-transparent hover:border-red-100 transition" 
-                            title="Rejeitar e Excluir Cadastro"
+                            className="text-red-500 hover:bg-red-50 p-2 rounded border border-transparent hover:border-red-100 transition" 
+                            title="Rejeitar e Excluir"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                           </button>
@@ -244,13 +255,11 @@ export default function UserManagement() {
                             ) : (
                               <>
                                 <button onClick={() => openEditModal(user)} className="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded text-sm font-medium transition">Editar</button>
-                                
-                                {/* Botão de Exclusão para usuários ativos também */}
                                 <button 
                                     onClick={() => handleDeleteUser(user.id)}
                                     disabled={processingId === user.id}
                                     className="text-red-500 hover:bg-red-50 p-1.5 rounded transition"
-                                    title="Excluir Usuário"
+                                    title="Excluir Definitivamente"
                                 >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                 </button>
