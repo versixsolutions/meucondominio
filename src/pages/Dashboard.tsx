@@ -1,9 +1,10 @@
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useDashboardStats } from '../hooks/useDashboardStats'
 import { formatCurrency } from '../lib/utils'
-import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import LoadingSpinner from '../components/LoadingSpinner'
 
 // Interface unificada para o feed de atualizações
 interface DashboardUpdate {
@@ -21,18 +22,30 @@ interface DashboardUpdate {
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { profile } = useAuth()
+  const { profile, isAdmin } = useAuth()
   const { stats } = useDashboardStats()
+  
   const [updates, setUpdates] = useState<DashboardUpdate[]>([])
   const [loadingUpdates, setLoadingUpdates] = useState(true)
-  
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
+  // 1. REDIRECIONAMENTO DO SUPER ADMIN
   useEffect(() => {
-    if (profile?.condominio_id) {
-      loadUnifiedFeed()
+    if (isAdmin) {
+      // Se for Super Admin, não faz sentido ver o dashboard de morador.
+      // Redireciona imediatamente para a visão macro.
+      navigate('/admin', { replace: true })
     }
-  }, [profile?.condominio_id])
+  }, [isAdmin, navigate])
+
+  // 2. Carregamento do Feed (Apenas se NÃO for admin, para economizar recurso)
+  useEffect(() => {
+    if (profile?.condominio_id && !isAdmin) {
+      loadUnifiedFeed()
+    } else {
+      setLoadingUpdates(false)
+    }
+  }, [profile?.condominio_id, isAdmin])
 
   const scrollCards = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
@@ -62,7 +75,6 @@ export default function Dashboard() {
     }
 
     try {
-      // Adicionado fetch de 'documents'
       const [comunicados, despesas, ocorrencias, votacoes, faqs, documentos] = await Promise.all([
         fetchData('comunicados', 
           supabase.from('comunicados')
@@ -103,6 +115,7 @@ export default function Dashboard() {
           supabase.from('documents')
             .select('id, title, created_at, metadata')
             .eq('condominio_id', profile?.condominio_id)
+            .is('metadata->>is_chunk', null) // Apenas documentos pai
             .order('created_at', { ascending: false })
             .limit(5)
         )
@@ -111,17 +124,14 @@ export default function Dashboard() {
       const newUpdates: DashboardUpdate[] = []
 
       comunicados?.forEach((c: any) => {
-        // Filtra comunicados automáticos de documentos para não duplicar no feed
-        // (Opcional: remova o if se quiser que apareça o aviso E o documento)
         if (c.title.startsWith('Novo Documento:')) return;
-
-        const isUrgent = c.priority === 'urgente' || c.type === 'urgente' || c.priority >= 3
+        const isUrgent = c.priority >= 3
         newUpdates.push({
           id: `com-${c.id}`,
           type: 'comunicado',
           title: isUrgent ? `URGENTE: ${c.title}` : c.title,
           description: c.content,
-          date: c.published_at, 
+          date: c.published_at || c.created_at, 
           icon: isUrgent ? '📢' : '📌',
           color: isUrgent ? 'text-red-600' : 'text-blue-600',
           bgColor: isUrgent ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-100',
@@ -130,7 +140,6 @@ export default function Dashboard() {
         })
       })
 
-      // Mapeamento dos Documentos (Histórico)
       documentos?.forEach((d: any) => {
         newUpdates.push({
           id: `doc-${d.id}`,
@@ -165,7 +174,7 @@ export default function Dashboard() {
           type: 'ocorrencia',
           title: `Ocorrência: ${o.status}`,
           description: o.title,
-          date: o.updated_at || o.created_at,
+          date: o.created_at,
           icon: '🚨',
           color: 'text-orange-600',
           bgColor: 'bg-white border-gray-100',
@@ -229,6 +238,9 @@ export default function Dashboard() {
     return 'agora'
   }
 
+  // Se for admin, exibe loading ou nada enquanto redireciona
+  if (isAdmin) return <LoadingSpinner message="Acessando painel administrativo..." />
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
       
@@ -237,11 +249,11 @@ export default function Dashboard() {
           Olá, {profile?.full_name?.split(' ')[0]}! 👋
         </h2>
         <p className="text-gray-600 text-sm">
-          {profile?.condominio_name ? `Condomínio ${profile.condominio_name}` : 'Bem-vindo ao Versix Norma'}
+          {profile?.condominio_name ? `${profile.condominio_name}` : 'Bem-vindo ao Versix Norma'}
         </p>
       </div>
 
-      {/* ... (Container de Cards Stat mantido igual) ... */}
+      {/* Container de Cards Stat (Atalhos Rápidos) */}
       <div className="relative group mb-8">
         <button onClick={() => scrollCards('left')} className="absolute left-0 top-1/2 -translate-y-1/2 -ml-4 z-20 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-lg text-gray-600 hover:text-primary hidden md:flex items-center justify-center hover:scale-110 transition border border-gray-100 opacity-0 group-hover:opacity-100">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
@@ -273,6 +285,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Feed de Atualizações */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 md:p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">

@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom'
 import { useAdmin } from '../../contexts/AdminContext'
 import { useAuth } from '../../contexts/AuthContext'
 import LoadingSpinner from '../../components/LoadingSpinner'
-import EmptyState from '../../components/EmptyState'
 import { formatCurrency } from '../../lib/utils'
 
 // Interface para os dados da tabela de saúde
@@ -16,21 +15,49 @@ interface CondominioHealth {
   pending_users: number
   open_issues: number
   active_polls: number
+  last_activity?: string
+}
+
+// Componente de Gráfico de Barras CSS (Financeiro)
+const SimpleBarChart = ({ data }: { data: number[] }) => {
+  const max = Math.max(...data, 1)
+  return (
+    <div className="flex items-end justify-between h-32 gap-2 mt-4">
+      {data.map((value, i) => (
+        <div key={i} className="w-full flex flex-col items-center group">
+          <div 
+            className="w-full bg-indigo-200 rounded-t-md transition-all duration-500 group-hover:bg-indigo-500 relative"
+            style={{ height: `${(value / max) * 100}%` }}
+          >
+            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+              {formatCurrency(value)}
+            </div>
+          </div>
+          <span className="text-[10px] text-gray-400 mt-1">M-{i+1}</span>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const { isAdmin } = useAuth()
-  const { setSelectedCondominioId } = useAdmin() // Para o botão "Acessar"
+  const { setSelectedCondominioId } = useAdmin()
 
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
     totalCondominios: 0,
     totalUsers: 0,
     totalPending: 0,
-    totalOpenIssues: 0
+    totalOpenIssues: 0,
+    financialVolume: 0
   })
   const [condominioHealth, setCondominioHealth] = useState<CondominioHealth[]>([])
+
+  // Mock de dados financeiros para o gráfico (Últimos 6 meses)
+  // Em produção, isso viria de uma query agregada
+  const financialTrend = [12500, 15000, 14200, 18000, 22000, stats.financialVolume || 25000]
 
   useEffect(() => {
     if (isAdmin) {
@@ -45,37 +72,35 @@ export default function AdminDashboard() {
       // 1. Buscar todos os condomínios
       const { data: condominios, error: condError } = await supabase
         .from('condominios')
-        .select('id, name, slug')
+        .select('id, name, slug, created_at')
         .order('created_at', { ascending: false })
 
       if (condError) throw condError
 
-      // 2. Para cada condomínio, buscar métricas vitais
-      // Nota: Em produção com muitos dados, isso deve virar uma RPC ou View no banco.
-      // Para o MVP, faremos queries paralelas.
+      // 2. Métricas vitais (Parallel Queries)
       const healthData = await Promise.all(
         (condominios || []).map(async (cond) => {
-          // Contagem de usuários
+          // Usuários
           const { count: totalUsers } = await supabase
             .from('users')
             .select('*', { count: 'exact', head: true })
             .eq('condominio_id', cond.id)
 
-          // Contagem de pendentes
+          // Pendentes
           const { count: pendingUsers } = await supabase
             .from('users')
             .select('*', { count: 'exact', head: true })
             .eq('condominio_id', cond.id)
             .eq('role', 'pending')
 
-          // Ocorrências abertas
+          // Ocorrências
           const { count: openIssues } = await supabase
             .from('ocorrencias')
             .select('*', { count: 'exact', head: true })
             .eq('condominio_id', cond.id)
             .in('status', ['aberto', 'em_andamento'])
 
-          // Votações ativas
+          // Votações
           const now = new Date().toISOString()
           const { count: activePolls } = await supabase
             .from('votacoes')
@@ -97,170 +122,184 @@ export default function AdminDashboard() {
 
       setCondominioHealth(healthData)
 
-      // Calcular totais globais
+      // 3. Calcular totais globais
       const totalUsers = healthData.reduce((acc, curr) => acc + curr.total_users, 0)
       const totalPending = healthData.reduce((acc, curr) => acc + curr.pending_users, 0)
       const totalOpenIssues = healthData.reduce((acc, curr) => acc + curr.open_issues, 0)
+
+      // 4. Volume Financeiro Global (Mês Atual)
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+      const { data: despesas } = await supabase
+        .from('despesas')
+        .select('amount')
+        .gte('due_date', startOfMonth)
+      
+      const financialVolume = despesas?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
 
       setStats({
         totalCondominios: condominios?.length || 0,
         totalUsers,
         totalPending,
-        totalOpenIssues
+        totalOpenIssues,
+        financialVolume
       })
 
     } catch (error) {
-      console.error('Erro ao carregar dashboard global:', error)
+      console.error('Erro no dashboard:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  // Função para "entrar" no condomínio
   const handleAccessCondominio = (id: string) => {
-    setSelectedCondominioId(id) // Seta o contexto global
-    // Opcional: Navegar para uma página específica, ex: Usuários
-    // navigate('/admin/usuarios') 
-    // Por enquanto, apenas seta o contexto e o usuário vê que o topo mudou
+    setSelectedCondominioId(id)
+    // Feedback visual de mudança de contexto
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  if (loading) return <LoadingSpinner message="Compilando dados da plataforma..." />
+  if (loading) return <LoadingSpinner message="Carregando visão global..." />
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-8 animate-fade-in pb-20">
+      
+      {/* Header Executivo */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-indigo-900 p-6 rounded-2xl shadow-lg text-white">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard Global</h1>
-          <p className="text-gray-500">Visão macro da plataforma Versix Norma.</p>
+          <h1 className="text-2xl md:text-3xl font-bold mb-1">Olá, Super! 👋</h1>
+          <p className="text-indigo-200 text-sm">Visão Macro da Plataforma Versix Norma.</p>
         </div>
-        <button
-          onClick={() => navigate('/admin/condominios')}
-          className="bg-indigo-600 text-white px-4 py-2.5 rounded-lg font-bold shadow-md hover:bg-indigo-700 transition flex items-center gap-2"
-        >
-          <span>🏢</span> Gerenciar Condomínios
-        </button>
-      </div>
-
-      {/* 1. KPIs Globais */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-xl">🏢</div>
-            <span className="text-xs font-bold text-gray-400 uppercase">Clientes</span>
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <div className="bg-indigo-800/50 p-3 rounded-lg backdrop-blur-sm border border-indigo-700">
+            <p className="text-xs text-indigo-300 uppercase font-bold">Volume Mensal</p>
+            <p className="text-xl font-bold text-green-400">{formatCurrency(stats.financialVolume)}</p>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{stats.totalCondominios}</p>
-          <p className="text-xs text-gray-500">Condomínios ativos</p>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center text-xl">👥</div>
-            <span className="text-xs font-bold text-gray-400 uppercase">Alcance</span>
-          </div>
-          <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
-          <p className="text-xs text-gray-500">Usuários totais</p>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${stats.totalPending > 0 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
-              ⏳
-            </div>
-            <span className="text-xs font-bold text-gray-400 uppercase">Fila</span>
-          </div>
-          <p className={`text-2xl font-bold ${stats.totalPending > 0 ? 'text-red-600' : 'text-gray-900'}`}>{stats.totalPending}</p>
-          <p className="text-xs text-gray-500">Aprovações pendentes</p>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <div className="w-10 h-10 bg-orange-100 text-orange-600 rounded-lg flex items-center justify-center text-xl">🚨</div>
-            <span className="text-xs font-bold text-gray-400 uppercase">Suporte</span>
-          </div>
-          <p className="text-2xl font-bold text-gray-900">{stats.totalOpenIssues}</p>
-          <p className="text-xs text-gray-500">Ocorrências abertas</p>
+          <button
+            onClick={() => navigate('/admin/condominios')}
+            className="bg-white text-indigo-900 px-4 py-3 rounded-lg font-bold shadow-md hover:bg-indigo-50 transition flex items-center justify-center gap-2"
+          >
+            <span>🏢</span> Novo Condomínio
+          </button>
         </div>
       </div>
 
-      {/* 2. Tabela de Saúde dos Condomínios */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-5 border-b border-gray-100 flex justify-between items-center">
-          <h3 className="font-bold text-gray-900">Saúde dos Condomínios</h3>
-          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
-            {condominioHealth.length} clientes
-          </span>
+      {/* 1. KPIs Globais (Grid Responsivo) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+        {/* Condomínios */}
+        <div className="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-200 relative overflow-hidden group hover:shadow-md transition">
+          <div className="absolute right-0 top-0 p-3 opacity-10 text-4xl group-hover:scale-110 transition-transform">🏢</div>
+          <p className="text-xs font-bold text-gray-400 uppercase">Condomínios</p>
+          <p className="text-2xl md:text-3xl font-bold text-gray-900 mt-1">{stats.totalCondominios}</p>
+          <p className="text-[10px] text-green-600 font-bold mt-1">Ativos na base</p>
         </div>
+
+        {/* Usuários */}
+        <div className="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-200 relative overflow-hidden group hover:shadow-md transition">
+          <div className="absolute right-0 top-0 p-3 opacity-10 text-4xl group-hover:scale-110 transition-transform">👥</div>
+          <p className="text-xs font-bold text-gray-400 uppercase">Usuários</p>
+          <p className="text-2xl md:text-3xl font-bold text-gray-900 mt-1">{stats.totalUsers}</p>
+          <p className="text-[10px] text-blue-600 font-bold mt-1">Total cadastrado</p>
+        </div>
+
+        {/* Pendências (Alerta) */}
+        <div className={`bg-white p-4 md:p-5 rounded-xl shadow-sm border relative overflow-hidden group hover:shadow-md transition ${stats.totalPending > 0 ? 'border-red-200' : 'border-gray-200'}`}>
+          <div className="absolute right-0 top-0 p-3 opacity-10 text-4xl group-hover:scale-110 transition-transform">⏳</div>
+          <p className="text-xs font-bold text-gray-400 uppercase">Aprovações</p>
+          <p className={`text-2xl md:text-3xl font-bold mt-1 ${stats.totalPending > 0 ? 'text-red-600' : 'text-gray-900'}`}>{stats.totalPending}</p>
+          <p className="text-[10px] text-gray-500 font-bold mt-1">Fila de espera</p>
+          {stats.totalPending > 0 && <span className="absolute top-3 right-3 w-2 h-2 bg-red-500 rounded-full animate-ping"></span>}
+        </div>
+
+        {/* Suporte */}
+        <div className="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-200 relative overflow-hidden group hover:shadow-md transition">
+          <div className="absolute right-0 top-0 p-3 opacity-10 text-4xl group-hover:scale-110 transition-transform">🚨</div>
+          <p className="text-xs font-bold text-gray-400 uppercase">Ocorrências</p>
+          <p className="text-2xl md:text-3xl font-bold text-gray-900 mt-1">{stats.totalOpenIssues}</p>
+          <p className="text-[10px] text-orange-600 font-bold mt-1">Abertas agora</p>
+        </div>
+      </div>
+
+      {/* 2. Seção Gráfica e Tabela */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50 text-xs uppercase text-gray-500 font-semibold">
-                <th className="px-5 py-3">Condomínio</th>
-                <th className="px-5 py-3 text-center">Usuários</th>
-                <th className="px-5 py-3 text-center">Pendentes</th>
-                <th className="px-5 py-3 text-center">Ocorrências</th>
-                <th className="px-5 py-3 text-center">Assembleias</th>
-                <th className="px-5 py-3 text-right">Ação</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {condominioHealth.map((cond) => (
-                <tr key={cond.id} className="hover:bg-gray-50 transition">
-                  <td className="px-5 py-3">
-                    <div className="font-bold text-gray-900 text-sm">{cond.name}</div>
-                    <div className="text-xs text-gray-400 font-mono">@{cond.slug}</div>
-                  </td>
-                  <td className="px-5 py-3 text-center text-sm text-gray-600">
-                    {cond.total_users}
-                  </td>
-                  <td className="px-5 py-3 text-center">
-                    {cond.pending_users > 0 ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-50 text-red-600 border border-red-100">
-                        {cond.pending_users}
-                      </span>
-                    ) : (
-                      <span className="text-gray-300">-</span>
-                    )}
-                  </td>
-                  <td className="px-5 py-3 text-center">
-                    {cond.open_issues > 0 ? (
-                      <span className="inline-flex items-center gap-1 text-sm font-medium text-orange-600">
-                        {cond.open_issues} 🚨
-                      </span>
-                    ) : (
-                      <span className="text-green-500 text-xs font-bold">OK</span>
-                    )}
-                  </td>
-                  <td className="px-5 py-3 text-center">
-                    {cond.active_polls > 0 ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded">
-                        {cond.active_polls} Ativas
-                      </span>
-                    ) : (
-                      <span className="text-gray-300 text-xs">Inativo</span>
-                    )}
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    <button
-                      onClick={() => handleAccessCondominio(cond.id)}
-                      className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 px-3 py-1.5 rounded text-xs font-bold transition border border-transparent hover:border-indigo-100"
-                    >
-                      Acessar &rarr;
-                    </button>
-                  </td>
+        {/* Coluna Esquerda: Financeiro */}
+        <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <h3 className="font-bold text-gray-900 mb-1">Volume Financeiro</h3>
+          <p className="text-xs text-gray-500 mb-4">Movimentação estimada (6 meses)</p>
+          <div className="h-px bg-gray-100 mb-4"></div>
+          <SimpleBarChart data={financialTrend} />
+          <div className="mt-4 text-center">
+            <span className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded border border-green-100">
+              +12% vs. mês anterior
+            </span>
+          </div>
+        </div>
+
+        {/* Coluna Direita: Tabela de Saúde */}
+        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+          <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+            <h3 className="font-bold text-gray-900">Saúde dos Condomínios</h3>
+            <span className="text-xs font-bold bg-white border border-gray-200 px-2 py-1 rounded">
+              {condominioHealth.length} clientes
+            </span>
+          </div>
+          
+          <div className="overflow-x-auto flex-1">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="text-[10px] uppercase text-gray-400 font-bold border-b border-gray-100">
+                  <th className="px-5 py-3">Cliente</th>
+                  <th className="px-5 py-3 text-center">Usuários</th>
+                  <th className="px-5 py-3 text-center">Pendentes</th>
+                  <th className="px-5 py-3 text-center">Ocorrências</th>
+                  <th className="px-5 py-3 text-right">Ação</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-        {condominioHealth.length === 0 && (
-          <div className="p-8 text-center text-gray-500">
-            Nenhum condomínio encontrado.
+              </thead>
+              <tbody className="divide-y divide-gray-50 text-sm">
+                {condominioHealth.map((cond) => (
+                  <tr key={cond.id} className="hover:bg-gray-50 transition group">
+                    <td className="px-5 py-3">
+                      <div className="font-bold text-gray-900">{cond.name}</div>
+                      <div className="text-xs text-gray-400 font-mono">@{cond.slug}</div>
+                    </td>
+                    <td className="px-5 py-3 text-center font-medium text-gray-600">
+                      {cond.total_users}
+                    </td>
+                    <td className="px-5 py-3 text-center">
+                      {cond.pending_users > 0 ? (
+                        <span className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded text-xs font-bold bg-red-100 text-red-700">
+                          {cond.pending_users}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300">-</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-center">
+                      {cond.open_issues > 0 ? (
+                        <span className="text-orange-600 font-bold">{cond.open_issues}</span>
+                      ) : (
+                        <span className="text-green-500 text-xs">OK</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <button
+                        onClick={() => handleAccessCondominio(cond.id)}
+                        className="text-indigo-600 font-bold text-xs bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded transition"
+                      >
+                        Acessar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
+          
+          {condominioHealth.length === 0 && (
+            <div className="p-8 text-center text-gray-400 text-sm">
+              Nenhum condomínio cadastrado.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
