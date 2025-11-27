@@ -70,7 +70,10 @@ export default function Dashboard() {
       if (data && data.length > 0) {
         setBanner(data[0])
         // Contar visualização (sem await para não travar a renderização)
-        supabase.rpc('increment_ad_view', { ad_id: data[0].id }).catch(console.error)
+        // CORREÇÃO: Substituído .catch por .then com verificação de erro
+        supabase.rpc('increment_ad_view', { ad_id: data[0].id }).then(({ error }) => {
+          if (error) console.error('Erro view banner:', error)
+        })
       }
     } catch (error) {
       console.error('Erro ao carregar banner:', error)
@@ -80,7 +83,10 @@ export default function Dashboard() {
   const handleBannerClick = () => {
     if (banner) {
       // Contar clique
-      supabase.rpc('increment_ad_click', { ad_id: banner.id }).catch(console.error)
+      // CORREÇÃO: Substituído .catch por .then com verificação de erro
+      supabase.rpc('increment_ad_click', { ad_id: banner.id }).then(({ error }) => {
+        if (error) console.error('Erro click banner:', error)
+      })
       
       if (banner.link_url) {
         window.open(banner.link_url, '_blank')
