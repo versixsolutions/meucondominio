@@ -1,13 +1,10 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-// CORREÇÃO DE ERRO 1: O logo é referenciado como um caminho absoluto (public folder)
-// em vez de um import, para evitar erros de build se o arquivo não existir em src/assets.
-// ATUALIZAÇÃO: Caminho do logo alterado para 'logo.png' que você enviou.
-// Certifique-se que o ficheiro 'logo.png' está em 'public/assets/logos/logo.png'
-const logo = '/assets/logos/versix-solutions-logo.png'
-
-// CORREÇÃO DE ERRO 7: Caminho correto para AuthContext
 import { useAuth } from '../contexts/AuthContext'
+import LoadingSpinner from '../components/LoadingSpinner'
+
+// Logo atualizada
+const logo = '/assets/logos/versix-solutions-logo.png'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -18,50 +15,68 @@ export default function Login() {
   const { signIn } = useAuth()
 
   async function handleSubmit(e: React.FormEvent) {
+    // 1. IMPEDE O RECARREGAMENTO DA PÁGINA IMEDIATAMENTE
     e.preventDefault()
+    
+    // Validação básica
+    if (!email || !password) {
+      setError('Por favor, preencha todos os campos.')
+      return
+    }
+
     setError('')
     setLoading(true)
 
     try {
+      // 2. Tenta o login
       await signIn(email, password)
-      // Redireciona para a página inicial (Dashboard)
-      // O Dashboard usará o profile.condominio_name para exibir o nome do condomínio.
-      navigate('/')
+      
+      // 3. Redirecionamento de sucesso
+      // Nota: O AuthContext ou App.tsx já deve tratar o redirecionamento
+      // baseado no perfil (Admin -> /admin, Morador -> /), mas forçamos aqui por segurança.
+      navigate('/', { replace: true }) 
+      
     } catch (err: any) {
-      setError(err.message || 'Erro ao fazer login')
+      console.error('Erro no login:', err)
+      // Mensagens de erro amigáveis
+      if (err.message.includes('Invalid login credentials')) {
+        setError('Email ou senha incorretos. Verifique e tente novamente.')
+      } else if (err.message.includes('Email not confirmed')) {
+        setError('Seu email ainda não foi confirmado. Verifique sua caixa de entrada.')
+      } else {
+        setError(err.message || 'Ocorreu um erro ao fazer login.')
+      }
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    // O gradiente de fundo já estava correto! (from-primary to-secondary)
     <div className="min-h-screen bg-gradient-to-br from-primary to-secondary flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
-        {/* Logo */}
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-fade-in">
+        
+        {/* Header */}
         <div className="text-center mb-8">
-          {/* Substituído o <div> de emoji pelo logo do Pinheiro Park */}
-          {/* ATUALIZAÇÃO: Tamanho aumentado de w-20 h-20 para w-40 e h-auto para manter a proporção */}
           <img
             src={logo}
             alt="Versix Norma"
-            className="w-40 h-auto mx-auto mb-4"
+            className="w-40 h-auto mx-auto mb-4 object-contain"
           />
-          {/* Título atualizado para Versix Norma */}
-          <h1 className="text-3xl font-bold text-gray-900">Versix Norma</h1>
-          <p className="text-gray-600 mt-2">Versix - Gestão à vista. Confiança total.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Bem-vindo de volta!</h1>
+          <p className="text-gray-500 text-sm mt-2">Acesse sua conta para continuar.</p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Formulário */}
+        <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-red-800 text-sm">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2 animate-shake">
+              <span className="text-red-500 mt-0.5">⚠️</span>
+              <p className="text-red-700 text-sm font-medium">{error}</p>
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">
+            <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">
               Email
             </label>
             <input
@@ -70,44 +85,62 @@ export default function Login() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="seu@email.com"
               required
-              // Anel de foco atualizado (purple-500 -> primary)
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+              disabled={loading}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition disabled:bg-gray-100 disabled:cursor-not-allowed"
+              autoComplete="username"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">
-              Senha
-            </label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide">
+                Senha
+              </label>
+              {/* Link de recuperação de senha (Opcional - Placeholder) */}
+              {/* <Link to="/forgot-password" class="text-xs text-primary hover:underline">Esqueceu?</Link> */}
+            </div>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              // Anel de foco atualizado (purple-500 -> primary)
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+              disabled={loading}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition disabled:bg-gray-100 disabled:cursor-not-allowed"
+              autoComplete="current-password"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            // Gradiente do botão atualizado (purple/blue -> primary/secondary)
-            className="w-full bg-gradient-to-r from-primary to-secondary text-white py-3 rounded-lg font-bold hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-primary text-white py-3.5 rounded-lg font-bold text-sm hover:bg-primary-dark hover:shadow-lg transform transition active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            {loading ? 'Entrando...' : 'Entrar'}
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Entrando...
+              </>
+            ) : (
+              'Entrar na Plataforma'
+            )}
           </button>
         </form>
 
         {/* Footer */}
-        <p className="text-center text-sm text-gray-600 mt-6">
-          Não tem conta?{' '}
-          {/* Cor do link atualizada (purple-600 -> primary) */}
-          <Link to="/signup" className="text-primary font-semibold hover:text-primary-dark">
-            Criar conta
-          </Link>
-        </p>
+        <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+          <p className="text-sm text-gray-600">
+            Ainda não tem conta?{' '}
+            <Link to="/signup" className="text-primary font-bold hover:underline">
+              Cadastre-se aqui
+            </Link>
+          </p>
+        </div>
+      </div>
+      
+      {/* Copyright Footer */}
+      <div className="absolute bottom-4 text-white/60 text-xs">
+        &copy; {new Date().getFullYear()} Versix Solutions. Todos os direitos reservados.
       </div>
     </div>
   )
