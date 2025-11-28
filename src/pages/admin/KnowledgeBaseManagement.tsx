@@ -5,7 +5,8 @@ import EmptyState from '../../components/EmptyState'
 import Modal from '../../components/ui/Modal'
 import toast from 'react-hot-toast'
 import { formatDateTime } from '../../lib/utils'
-import { useAdmin } from '../../contexts/AdminContext' // Importar
+import { useAdmin } from '../../contexts/AdminContext'
+import { useNavigate } from 'react-router-dom' // Importar useNavigate
 
 interface Documento {
   id: number
@@ -23,7 +24,8 @@ interface Documento {
 }
 
 export default function KnowledgeBaseManagement() {
-  const { selectedCondominioId } = useAdmin() // Contexto Global
+  const { selectedCondominioId } = useAdmin()
+  const navigate = useNavigate() // Hook de navegação
 
   const [documents, setDocuments] = useState<Documento[]>([])
   const [loading, setLoading] = useState(true)
@@ -46,7 +48,7 @@ export default function KnowledgeBaseManagement() {
       const { data, error } = await supabase
         .from('documents')
         .select('id, title, content, created_at, metadata, embedding') 
-        .eq('condominio_id', selectedCondominioId) // Filtro Seguro
+        .eq('condominio_id', selectedCondominioId)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -173,7 +175,16 @@ export default function KnowledgeBaseManagement() {
           <p className="text-gray-500 text-sm">Gerencie os documentos que a Norma usa para aprender neste condomínio.</p>
         </div>
         
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
+            
+            {/* Botão de Importar CSV */}
+            <button 
+                onClick={() => navigate('/admin/faq-import')}
+                className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-50 transition flex items-center gap-2 shadow-sm"
+            >
+                <span>📥</span> Importar CSV
+            </button>
+
             {selectedIds.size > 0 && (
                 <button 
                     onClick={() => setIsMassDeleteModalOpen(true)}
@@ -184,7 +195,7 @@ export default function KnowledgeBaseManagement() {
                 </button>
             )}
 
-            <div className="relative flex-1 md:w-64">
+            <div className="relative flex-1 md:w-64 min-w-[200px]">
                 <input 
                     type="text" 
                     placeholder="Buscar documento..." 
