@@ -5,7 +5,6 @@ import { useAuth } from '../contexts/AuthContext'
 import PageLayout from '../components/PageLayout'
 import LoadingSpinner from '../components/LoadingSpinner'
 import EmptyState from '../components/EmptyState'
-import Chatbot from '../components/Chatbot'
 import Modal from '../components/ui/Modal'
 import toast from 'react-hot-toast'
 
@@ -20,31 +19,37 @@ interface FAQ {
 }
 
 const CATEGORIES: Record<string, any> = {
-  'geral': { label: 'Geral', icon: '📋', color: 'bg-blue-100 text-blue-700', iconBg: 'bg-blue-100' },
-  'convivência': { label: 'Convivência', icon: '🤝', color: 'bg-purple-100 text-purple-700', iconBg: 'bg-purple-100' },
-  'limpeza': { label: 'Limpeza', icon: '✨', color: 'bg-green-100 text-green-700', iconBg: 'bg-green-100' },
-  'lazer': { label: 'Lazer', icon: '⚽', color: 'bg-orange-100 text-orange-700', iconBg: 'bg-orange-100' },
-  'segurança': { label: 'Segurança', icon: '🛡️', color: 'bg-indigo-100 text-indigo-700', iconBg: 'bg-indigo-100' },
-  'financeiro': { label: 'Financeiro', icon: '💰', color: 'bg-teal-100 text-teal-700', iconBg: 'bg-teal-100' },
-  'default': { label: 'Outros', icon: '❓', color: 'bg-gray-100 text-gray-700', iconBg: 'bg-gray-100' }
+  'horarios': { label: 'Horários', icon: '⏰', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  'area_lazer': { label: 'Área de Lazer', icon: '⚽', color: 'bg-orange-50 text-orange-700 border-orange-200' },
+  'animais': { label: 'Animais', icon: '🐾', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+  'garagem': { label: 'Garagem', icon: '🚗', color: 'bg-zinc-50 text-zinc-700 border-zinc-200' },
+  'lixo': { label: 'Lixo', icon: '♻️', color: 'bg-green-50 text-green-700 border-green-200' },
+  'obras': { label: 'Obras', icon: '🔨', color: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
+  'seguranca': { label: 'Segurança', icon: '🛡️', color: 'bg-red-50 text-red-700 border-red-200' },
+  'financeiro': { label: 'Financeiro', icon: '💰', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  'penalidades': { label: 'Multas', icon: '⚠️', color: 'bg-rose-50 text-rose-700 border-rose-200' },
+  'geral': { label: 'Geral', icon: '📋', color: 'bg-gray-50 text-gray-700 border-gray-200' },
 }
 
-function getCategoryStyle(category: string | null) {
-  if (!category) return CATEGORIES.default
-  const normalized = category.toLowerCase()
-  const key = Object.keys(CATEGORIES).find(k => normalized.includes(k))
-  return key ? CATEGORIES[key] : CATEGORIES.default
+function getCategoryInfo(categoryKey: string) {
+  const normalized = categoryKey?.toLowerCase() || 'geral'
+  return CATEGORIES[normalized] || CATEGORIES['geral']
 }
 
 export default function FAQ() {
   const { canManage, profile } = useAuth()
   const navigate = useNavigate()
+  
   const [faqs, setFaqs] = useState<FAQ[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
-  const [isChatOpen, setIsChatOpen] = useState(false)
   
+  // Estado para controlar qual categoria está expandida (Accordion Nível 1)
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
+  
+  // Estado para controlar quais perguntas estão expandidas (Accordion Nível 2)
+  const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set())
+
   // Estados do Modal de Importação
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [importPreview, setImportPreview] = useState<any[]>([])
@@ -60,7 +65,8 @@ export default function FAQ() {
       const { data, error } = await supabase
         .from('faqs')
         .select('*')
-        .eq('condominio_id', profile?.condominio_id) // Filtra pelo condomínio do usuário
+        .eq('condominio_id', profile?.condominio_id) 
+        .order('priority', { ascending: true }) // Prioridade primeiro
         .order('question', { ascending: true })
         
       if (error) throw error
@@ -72,21 +78,40 @@ export default function FAQ() {
     }
   }
 
-  // --- Lógica de Importação CSV ---
+  const toggleQuestion = (id: string) => {
+    setExpandedQuestions(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(id)) newSet.delete(id)
+      else newSet.add(id)
+      return newSet
+    })
+  }
+
+  // Agrupa as FAQs por categoria
+  const groupedFaqs = faqs.reduce((acc, faq) => {
+    const cat = faq.category || 'geral'
+    if (!acc[cat]) acc[cat] = []
+    acc[cat].push(faq)
+    return acc
+  }, {} as Record<string, FAQ[]>)
+
+  // Filtra categorias baseado na busca (se houver busca, expande tudo que der match)
+  const activeCategories = Object.keys(groupedFaqs).filter(catKey => {
+    if (!searchTerm) return true
+    // Se tiver busca, verifica se alguma pergunta da categoria dá match
+    return groupedFaqs[catKey].some(f => 
+      f.question.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      f.answer.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  })
+
+  // --- Lógica de Importação CSV (Mantida igual) ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
-    if (!file.name.endsWith('.csv')) {
-      toast.error('Apenas arquivos .csv são permitidos')
-      return
-    }
-
+    if (!file.name.endsWith('.csv')) { toast.error('Apenas arquivos .csv são permitidos'); return }
     const reader = new FileReader()
-    reader.onload = (event) => {
-      const text = event.target?.result as string
-      parseCSV(text)
-    }
+    reader.onload = (event) => parseCSV(event.target?.result as string)
     reader.readAsText(file)
   }
 
@@ -95,33 +120,24 @@ export default function FAQ() {
       const lines = text.split('\n')
       const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
       const data = []
-      
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim()
         if (!line) continue
-        
-        // Regex para separar por vírgula ignorando aspas
         const values = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)?.map(v => v.replace(/"/g, '')) || line.split(',')
-        
         if (values.length >= 2) {
             const entry: any = {}
-            headers.forEach((header, index) => {
-                if (values[index]) entry[header] = values[index].trim()
-            })
+            headers.forEach((header, index) => { if (values[index]) entry[header] = values[index].trim() })
             if (entry.question && entry.answer) data.push(entry)
         }
       }
       setImportPreview(data)
-    } catch (err) {
-      toast.error('Erro ao ler CSV. Verifique o formato.')
-    }
+    } catch (err) { toast.error('Erro ao ler CSV.') }
   }
 
   const confirmImport = async () => {
     if (!profile?.condominio_id) return
     setIsImporting(true)
-    const toastId = toast.loading('Importando perguntas...')
-
+    const toastId = toast.loading('Importando...')
     try {
       const faqsToInsert = importPreview.map(item => ({
         condominio_id: profile.condominio_id,
@@ -131,28 +147,15 @@ export default function FAQ() {
         priority: item.priority ? parseInt(item.priority) : 3,
         article_reference: item.article_reference || null
       }))
-
       const { error } = await supabase.from('faqs').insert(faqsToInsert)
       if (error) throw error
-
       toast.success(`${faqsToInsert.length} perguntas importadas!`, { id: toastId })
       setIsImportModalOpen(false)
       setImportPreview([])
-      loadFAQs() // Recarrega a lista
-    } catch (err: any) {
-      console.error(err)
-      toast.error('Erro na importação: ' + err.message, { id: toastId })
-    } finally {
-      setIsImporting(false)
-    }
+      loadFAQs()
+    } catch (err: any) { console.error(err); toast.error('Erro na importação.', { id: toastId }) } finally { setIsImporting(false) }
   }
   // -------------------------------
-
-  const filtered = faqs.filter(f => {
-    const matchesSearch = f.question.toLowerCase().includes(searchTerm.toLowerCase()) || f.answer.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = !selectedCategory || getCategoryStyle(f.category).label === CATEGORIES[selectedCategory]?.label
-    return matchesSearch && matchesCategory
-  })
 
   if (loading) return <LoadingSpinner />
 
@@ -161,8 +164,6 @@ export default function FAQ() {
       
       {/* --- Header de Ações --- */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        
-        {/* Barra de Busca */}
         <div className="relative flex-1">
           <input 
             type="text" 
@@ -174,7 +175,6 @@ export default function FAQ() {
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         </div>
 
-        {/* Botão Importar (Apenas Admin/Síndico) - Agora abre Modal */}
         {canManage && (
           <button 
             onClick={() => { setIsImportModalOpen(true); setImportPreview([]); }}
@@ -185,112 +185,94 @@ export default function FAQ() {
         )}
       </div>
       
-      {/* --- Filtros de Categoria --- */}
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
-        <button onClick={() => setSelectedCategory(null)} className={`px-4 py-2 rounded-full text-xs font-bold border transition shrink-0 ${!selectedCategory ? 'bg-gray-800 text-white border-gray-800 shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Todas</button>
-        {Object.keys(CATEGORIES).filter(k => k !== 'default').map(key => (
-          <button key={key} onClick={() => setSelectedCategory(key)} className={`px-4 py-2 rounded-full text-xs font-bold border transition shrink-0 flex items-center gap-1 ${selectedCategory === key ? 'bg-primary text-white border-primary shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
-            <span>{CATEGORIES[key].icon}</span> {CATEGORIES[key].label}
-          </button>
-        ))}
-      </div>
+      {/* --- Lista de Categorias (Accordion) --- */}
+      <div className="space-y-4 pb-20">
+        {activeCategories.length === 0 ? (
+           <EmptyState icon="🔍" title="Nada encontrado" description="Tente outro termo ou use a Norma (IA)." />
+        ) : (
+          activeCategories.map(catKey => {
+            const catInfo = getCategoryInfo(catKey)
+            const questions = groupedFaqs[catKey].filter(q => !searchTerm || q.question.toLowerCase().includes(searchTerm.toLowerCase()))
+            
+            if (questions.length === 0) return null
 
-      {/* --- Lista de FAQs --- */}
-      {filtered.length > 0 ? (
-        <div className="space-y-3 pb-20">
-          {filtered.map(f => {
-            const style = getCategoryStyle(f.category)
+            // Se tiver busca, expande automaticamente. Se não, respeita o estado manual.
+            const isCatExpanded = searchTerm ? true : expandedCategory === catKey
+
             return (
-              <div key={f.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition group">
-                <div className="p-4 sm:p-5">
-                  <div className="flex items-start gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-base ${style.iconBg}`}>
-                      {style.icon}
+              <div key={catKey} className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm transition-all duration-300">
+                
+                {/* Header da Categoria */}
+                <button 
+                  onClick={() => setExpandedCategory(isCatExpanded ? null : catKey)}
+                  className={`w-full flex items-center justify-between p-4 hover:bg-gray-50 transition ${isCatExpanded ? 'bg-gray-50 border-b border-gray-100' : ''}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl border ${catInfo.color.replace('text-', 'border-').split(' ')[2]} ${catInfo.color.split(' ')[0]}`}>
+                      {catInfo.icon}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${style.color}`}>
-                          {style.label}
-                        </span>
-                      </div>
-                      <h3 className="font-bold text-gray-900 mb-2 text-sm sm:text-base">{f.question}</h3>
-                      <p className="text-sm text-gray-600 whitespace-pre-line leading-relaxed bg-gray-50 p-3 rounded-lg border border-gray-100">
-                        {f.answer}
-                      </p>
-                      {f.article_reference && (
-                        <p className="text-[10px] text-gray-400 mt-2 font-medium uppercase tracking-wider flex items-center gap-1">
-                          📚 Fonte: {f.article_reference}
-                        </p>
-                      )}
+                    <div className="text-left">
+                      <h3 className="font-bold text-gray-800 text-sm md:text-base">{catInfo.label}</h3>
+                      <p className="text-xs text-gray-500">{questions.length} tópicos</p>
                     </div>
                   </div>
-                </div>
+                  <svg className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${isCatExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </button>
+
+                {/* Lista de Perguntas da Categoria */}
+                {isCatExpanded && (
+                  <div className="bg-white animate-fade-in">
+                    {questions.map((faq, idx) => {
+                      const isQExpanded = expandedQuestions.has(faq.id)
+                      return (
+                        <div key={faq.id} className={`border-b border-gray-100 last:border-0 ${isQExpanded ? 'bg-gray-50/50' : ''}`}>
+                          <button 
+                            onClick={() => toggleQuestion(faq.id)}
+                            className="w-full text-left p-4 py-3 flex items-start gap-3 hover:bg-gray-50 transition"
+                          >
+                             <span className="mt-0.5 text-gray-400 text-xs font-bold min-w-[1.5rem]">Q{idx+1}.</span>
+                             <div className="flex-1">
+                               <p className={`text-sm font-medium ${isQExpanded ? 'text-primary font-bold' : 'text-gray-700'}`}>{faq.question}</p>
+                             </div>
+                             <span className="text-gray-400 text-xs">{isQExpanded ? '−' : '+'}</span>
+                          </button>
+                          
+                          {/* Resposta Expandida */}
+                          {isQExpanded && (
+                            <div className="px-4 pb-4 pt-0 ml-9">
+                              <div className="text-sm text-gray-600 leading-relaxed bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                                {faq.answer}
+                                {faq.article_reference && (
+                                  <div className="mt-2 pt-2 border-t border-gray-100 text-[10px] text-gray-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                                    📖 Fonte: {faq.article_reference}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             )
-          })}
-        </div>
-      ) : (
-        <EmptyState 
-          icon="🔍" 
-          title="Nada encontrado" 
-          description="Tente outro termo ou use nossa Assistente Virtual." 
-          action={{ label: 'Limpar Filtros', onClick: () => { setSearchTerm(''); setSelectedCategory(null) } }} 
-        />
-      )}
+          })
+        )}
+      </div>
 
-      {/* --- Botão Flutuante Chatbot --- */}
-      <button
-        onClick={() => setIsChatOpen(true)}
-        className="fixed bottom-6 right-6 bg-gradient-to-r from-purple-600 to-indigo-600 text-white w-14 h-14 rounded-full shadow-lg hover:shadow-xl flex items-center justify-center transition transform hover:scale-110 z-50 group border-2 border-white"
-        title="Falar com Norma"
-      >
-        <span className="text-2xl group-hover:animate-pulse">🤖</span>
-      </button>
-      <Chatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
-
-      {/* --- MODAL DE IMPORTAÇÃO --- */}
+      {/* Modal de Importação (Mantido) */}
       <Modal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} title="Importar FAQs">
         {!importPreview.length ? (
-          <div 
-            onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:bg-gray-50 transition"
-          >
+          <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:bg-gray-50 transition">
             <div className="text-4xl mb-2">📂</div>
             <p className="text-sm font-bold text-gray-700">Clique para selecionar o CSV</p>
-            <p className="text-xs text-gray-500 mt-1">Colunas: question, answer, category, article_reference</p>
             <input type="file" ref={fileInputRef} accept=".csv" className="hidden" onChange={handleFileChange} />
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex justify-between items-center bg-green-50 p-3 rounded-lg border border-green-100">
-              <span className="text-sm font-bold text-green-800">✅ {importPreview.length} perguntas encontradas</span>
-              <button onClick={() => setImportPreview([])} className="text-xs text-red-600 underline">Trocar arquivo</button>
-            </div>
-            
-            <div className="max-h-60 overflow-y-auto border rounded-lg text-xs">
-              <table className="w-full text-left">
-                <thead className="bg-gray-50 sticky top-0">
-                  <tr><th className="p-2">Pergunta</th><th className="p-2">Categoria</th></tr>
-                </thead>
-                <tbody>
-                  {importPreview.slice(0, 10).map((item, idx) => (
-                    <tr key={idx} className="border-t">
-                      <td className="p-2 truncate max-w-[150px]">{item.question}</td>
-                      <td className="p-2">{item.category}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {importPreview.length > 10 && <div className="p-2 text-center text-gray-400 italic">... e mais {importPreview.length - 10} itens</div>}
-            </div>
-
-            <button 
-              onClick={confirmImport} 
-              disabled={isImporting}
-              className="w-full bg-primary text-white py-3 rounded-lg font-bold hover:bg-primary-dark transition disabled:opacity-50"
-            >
-              {isImporting ? 'Importando...' : 'Confirmar Importação'}
-            </button>
+            <div className="flex justify-between items-center bg-green-50 p-3 rounded-lg border border-green-100"><span className="text-sm font-bold text-green-800">✅ {importPreview.length} perguntas</span><button onClick={() => setImportPreview([])} className="text-xs text-red-600 underline">Trocar</button></div>
+            <button onClick={confirmImport} disabled={isImporting} className="w-full bg-primary text-white py-3 rounded-lg font-bold hover:bg-primary-dark disabled:opacity-50">{isImporting ? 'Importando...' : 'Confirmar'}</button>
           </div>
         )}
       </Modal>
