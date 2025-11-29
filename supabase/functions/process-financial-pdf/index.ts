@@ -1,12 +1,32 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { GoogleGenerativeAI } from "npm:@google/generative-ai";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// ✅ ORIGENS PERMITIDAS
+const ALLOWED_ORIGINS = [
+  'https://versixnorma.com.br',
+  'https://www.versixnorma.com.br',
+  'https://app.versixnorma.com.br',
+  'http://localhost:5173',
+  'http://localhost:3000'
+]
+
+// ✅ FUNÇÃO PARA OBTER CORS HEADERS VÁLIDOS
+function getCorsHeaders(origin?: string): Record<string, string> {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+  
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Max-Age': '3600',
+    'Content-Type': 'application/json'
+  }
+}
 
 serve(async (req) => {
+  const origin = req.headers.get('origin') || undefined
+  const corsHeaders = getCorsHeaders(origin)
+  
   // 1. Tratamento de CORS (Para o frontend conseguir chamar)
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });

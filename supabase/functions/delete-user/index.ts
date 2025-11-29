@@ -1,13 +1,32 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+// ✅ ORIGENS PERMITIDAS
+const ALLOWED_ORIGINS = [
+  'https://versixnorma.com.br',
+  'https://www.versixnorma.com.br',
+  'https://app.versixnorma.com.br',
+  'http://localhost:5173',
+  'http://localhost:3000'
+]
+
+// ✅ FUNÇÃO PARA OBTER CORS HEADERS VÁLIDOS
+function getCorsHeaders(origin?: string): Record<string, string> {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+  
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Max-Age': '3600',
+    'Content-Type': 'application/json'
+  }
 }
 
 serve(async (req: Request) => {
+  const origin = req.headers.get('origin') || undefined
+  const corsHeaders = getCorsHeaders(origin)
+  
   // 1. Tratamento de CORS (Preflight)
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
