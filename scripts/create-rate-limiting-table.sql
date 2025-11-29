@@ -13,12 +13,13 @@ CREATE TABLE IF NOT EXISTS ai_requests (
 );
 
 -- ✅ Índices para queries rápidas
-CREATE INDEX idx_ai_requests_user_id_created_at ON ai_requests(user_id, created_at DESC);
-CREATE INDEX idx_ai_requests_condominio_id ON ai_requests(condominio_id);
+CREATE INDEX IF NOT EXISTS idx_ai_requests_user_id_created_at ON ai_requests(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_requests_condominio_id ON ai_requests(condominio_id);
 
 -- ✅ Policy RLS: Usuários só podem ver suas próprias requisições
 ALTER TABLE ai_requests ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "users_can_view_own_requests" ON ai_requests;
 CREATE POLICY "users_can_view_own_requests" ON ai_requests
   FOR SELECT USING (
     user_id = auth.uid()::text OR
@@ -26,11 +27,13 @@ CREATE POLICY "users_can_view_own_requests" ON ai_requests
   );
 
 -- ✅ Policy para inserção: apenas via Edge Function
+DROP POLICY IF EXISTS "insert_via_edge_function" ON ai_requests;
 CREATE POLICY "insert_via_edge_function" ON ai_requests
   FOR INSERT WITH CHECK (TRUE);
 
 -- ✅ Função para limpar requisições antigas (> 7 dias)
-CREATE OR REPLACE FUNCTION cleanup_old_ai_requests()
+DROP FUNCTION IF EXISTS cleanup_old_ai_requests();
+CREATE FUNCTION cleanup_old_ai_requests()
 RETURNS void AS $$
 BEGIN
   DELETE FROM ai_requests WHERE created_at < NOW() - INTERVAL '7 days';
