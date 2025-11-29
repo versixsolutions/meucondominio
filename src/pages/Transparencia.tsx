@@ -217,20 +217,6 @@ export default function Transparencia() {
 
         </div>
 
-        {/* Card informativo adicional */}
-        <div className="bg-gray-50 border border-gray-200 p-5 rounded-xl">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">📋</span>
-            <div className="flex-1">
-              <h4 className="font-bold text-gray-900 mb-1 text-sm">Acesso Completo</h4>
-              <p className="text-xs text-gray-600 leading-relaxed">
-                Todos os moradores têm acesso completo aos módulos de Transparência. Para dúvidas sobre
-                assembleias ou movimentações financeiras, entre em contato com o síndico através da Central de Suporte.
-              </p>
-            </div>
-          </div>
-        </div>
-
       </div>
     </PageLayout>
   )
