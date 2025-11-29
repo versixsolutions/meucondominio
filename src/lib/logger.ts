@@ -1,0 +1,125 @@
+/**
+ * 🔍 Logger Centralizado da Aplicação
+ * 
+ * Utiliza console em desenvolvimento e pode ser estendido para
+ * integração com serviços como Sentry, LogRocket, etc.
+ * 
+ * Uso:
+ *   import { logger } from '../lib/logger'
+ *   logger.info('Mensagem', { context: 'valor' })
+ *   logger.error('Erro', new Error('msg'), { userId: '123' })
+ */
+
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+
+interface LogContext {
+  [key: string]: any
+}
+
+class Logger {
+  private isDev = import.meta.env.DEV
+  private isProduction = import.meta.env.PROD
+
+  /**
+   * Log de debug (apenas desenvolvimento)
+   */
+  debug(message: string, context?: LogContext) {
+    if (this.isDev) {
+      console.debug(`[DEBUG] ${message}`, context || '')
+    }
+  }
+
+  /**
+   * Log informativo
+   */
+  info(message: string, context?: LogContext) {
+    console.info(`✅ [INFO] ${message}`, context || '')
+    this.captureToServer('info', message, context)
+  }
+
+  /**
+   * Log de aviso
+   */
+  warn(message: string, context?: LogContext) {
+    console.warn(`⚠️  [WARN] ${message}`, context || '')
+    this.captureToServer('warn', message, context)
+  }
+
+  /**
+   * Log de erro crítico
+   */
+  error(message: string, error?: Error | unknown, context?: LogContext) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    const errorStack = error instanceof Error ? error.stack : undefined
+
+    console.error(`❌ [ERROR] ${message}`, {
+      error: errorMessage,
+      stack: errorStack,
+      ...context
+    })
+
+    this.captureToServer('error', message, {
+      error: errorMessage,
+      stack: errorStack,
+      ...context
+    })
+  }
+
+  /**
+   * Log estruturado com performance tracking
+   */
+  performance(label: string, duration: number, context?: LogContext) {
+    const level = duration > 3000 ? 'warn' : 'info'
+    const emoji = duration > 3000 ? '🐌' : '⚡'
+    
+    console[level](`${emoji} [PERF] ${label}: ${duration.toFixed(2)}ms`, context || '')
+  }
+
+  /**
+   * Capturar logs para servidor (em produção)
+   * TODO: Integrar com Sentry ou serviço similar
+   */
+  private captureToServer(level: LogLevel, _message: string, _context?: LogContext) {
+    if (this.isProduction && level !== 'debug') {
+      // TODO: Enviar para Sentry/LogRocket
+      // Sentry.captureMessage(message, level)
+    }
+  }
+}
+
+// Instância singleton
+export const logger = new Logger()
+
+/**
+ * Hook para performance tracking
+ * 
+ * Uso:
+ *   const { startTimer, endTimer } = usePerformanceTimer()
+ *   startTimer('loadData')
+ *   // ... fazer algo
+ *   endTimer('loadData')  // Loga tempo automaticamente
+ */
+export function usePerformanceTimer() {
+  const timers = new Map<string, number>()
+
+  return {
+    startTimer: (label: string) => {
+      timers.set(label, performance.now())
+    },
+    endTimer: (label: string) => {
+      const start = timers.get(label)
+      if (start) {
+        const duration = performance.now() - start
+        logger.performance(label, duration)
+        timers.delete(label)
+      }
+    }
+  }
+}
+
+// Export para debugging global em dev mode
+if (import.meta.env.DEV) {
+  const w = globalThis as any
+  w.__logger = logger
+  w.__perf = usePerformanceTimer()
+}
