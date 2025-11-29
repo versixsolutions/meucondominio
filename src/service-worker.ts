@@ -4,14 +4,35 @@ import { clientsClaim } from 'workbox-core'
 
 declare let self: ServiceWorkerGlobalScope
 
-cleanupOutdatedCaches()
-precacheAndRoute(self.__WB_MANIFEST)
-self.clientsClaim()
+// Cleanup outdated caches with error handling
+try {
+  cleanupOutdatedCaches()
+} catch (err) {
+  console.warn('Erro ao limpar caches outdated:', err)
+}
+
+// Precache and route with error handling
+try {
+  precacheAndRoute(self.__WB_MANIFEST)
+} catch (err) {
+  console.warn('Erro ao configurar precache:', err)
+}
+
+// Claim clients with error handling
+try {
+  self.clientsClaim()
+} catch (err) {
+  console.warn('Erro ao clamar clients:', err)
+}
 
 // Handler para mensagens do cliente (para atualização de SW)
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting()
+  try {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+      self.skipWaiting()
+    }
+  } catch (err) {
+    console.error('Erro ao processar SKIP_WAITING:', err)
   }
 })
 
