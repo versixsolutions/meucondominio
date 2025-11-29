@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import toast from 'react-hot-toast'
 
 // Interfaces atualizadas para refletir o retorno da RPC
 export interface VotacaoWithStats {
@@ -14,7 +15,9 @@ export interface VotacaoWithStats {
   is_secret: boolean
   options: Array<{ id: number; text: string }>
   user_vote?: string | null // O voto do usuário logado (se houver)
+  user_vote_id?: number | null // ID da opção votada (para detecção de duplo voto)
   results?: Record<string, number> // Totais agregados da RPC
+  user_already_voted?: boolean // Flag para blocar re-votação
 }
 
 export function useVotacoes(filter: 'all' | 'ativa' | 'encerrada' = 'all') {
@@ -78,7 +81,9 @@ export function useVotacoes(filter: 'all' | 'ativa' | 'encerrada' = 'all') {
             ...v,
             status,
             results: resultsData || {},
-            user_vote: userVoteText
+            user_vote: userVoteText,
+            user_vote_id: userVoteId,
+            user_already_voted: !!userVoteId // ✅ Flag para blocar re-votação
           }
         })
       )
@@ -88,28 +93,67 @@ export function useVotacoes(filter: 'all' | 'ativa' | 'encerrada' = 'all') {
     } catch (err) {
       console.error('Erro ao carregar votações:', err)
       setError(err instanceof Error ? err : new Error('Erro desconhecido'))
+      toast.error('Erro ao carregar votações')
     } finally {
       setLoading(false)
     }
   }
 
+  /**
+   * Votar em uma opção
+   * ✅ Valida voto duplo antes de enviar
+   * ✅ Trata erros específicos
+   * ✅ Recarrega dados após sucesso
+   */
   async function votar(votacaoId: string, optionId: number) {
-    if (!user) return
+    if (!user) {
+      toast.error('Você precisa estar logado para votar')
+      return false
+    }
+
     try {
+      // ✅ VALIDAÇÃO: Verificar voto duplo
+      const votacao = votacoes.find(v => v.id === votacaoId)
+      if (votacao?.user_already_voted) {
+        toast.error('❌ Você já votou nesta pauta! Cada pessoa vota uma única vez.')
+        return false
+      }
+
+      // ✅ VALIDAÇÃO: Votação aberta?
+      if (votacao?.status !== 'ativa') {
+        toast.error('❌ Esta votação foi encerrada. Não é mais possível votar.')
+        return false
+      }
+
+      const toastLoading = toast.loading('Registrando seu voto...')
+      
       const { error } = await supabase.from('votos').insert({
         votacao_id: votacaoId,
         user_id: user.id,
         option_id: optionId
       })
       
-      if (error) throw error
+      if (error) {
+        // ✅ Tratamento de erro: detectar constraint violation (voto duplo no banco)
+        if (error.code === '23505') {
+          toast.dismiss(toastLoading)
+          toast.error('Você já votou nesta pauta!')
+          return false
+        }
+        throw error
+      }
+      
+      // ✅ Sucesso
+      toast.dismiss(toastLoading)
+      toast.success('✅ Seu voto foi registrado com sucesso!')
       
       // Recarregar para atualizar UI
       await loadVotacoes()
       return true
     } catch (err: any) {
       console.error('Erro ao votar:', err)
-      throw err
+      toast.error(err.message || 'Erro ao registrar voto')
+      return false
     }
   }
 

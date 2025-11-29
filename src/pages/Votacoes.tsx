@@ -5,21 +5,39 @@ import { useAuth } from '../contexts/AuthContext'
 import PageLayout from '../components/PageLayout'
 import LoadingSpinner from '../components/LoadingSpinner'
 import EmptyState from '../components/EmptyState'
+import toast from 'react-hot-toast'
 
 export default function Votacoes() {
-  const [filter, setFilter] = useState<'all' | 'active' | 'closed'>('active')
+  const [filter, setFilter] = useState<'all' | 'ativa' | 'encerrada'>('ativa')
   const { votacoes, loading, votar, reload } = useVotacoes(filter)
   const { canManage } = useAuth()
   const [votingId, setVotingId] = useState<string | null>(null)
 
-  const handleVote = async (votacaoId: string, optionId: number) => {
-    if (!confirm('Confirmar seu voto nesta opção?')) return
-    setVotingId(votacaoId)
+  const handleVote = async (votacao: any, optionId: number) => {
+    // ✅ Validação 1: Já votou?
+    if (votacao.user_already_voted) {
+      toast.error('❌ Você já votou nesta pauta!')
+      return
+    }
+
+    // ✅ Validação 2: Votação ainda aberta?
+    if (votacao.status !== 'ativa') {
+      toast.error('❌ Esta votação foi encerrada!')
+      return
+    }
+
+    const optionText = votacao.options.find((o: any) => o.id === optionId)?.text
+
+    if (!confirm(`Confirmar seu voto em: "${optionText}"?\n\nEsta ação não poderá ser desfeita.`)) {
+      return
+    }
+
+    setVotingId(votacao.id)
     try {
-      await votar(votacaoId, optionId)
-      alert('Voto registrado com sucesso!')
-    } catch (error: any) {
-      alert('Erro: ' + (error.message || 'Não foi possível votar.'))
+      const success = await votar(votacao.id, optionId)
+      if (success) {
+        await reload()
+      }
     } finally {
       setVotingId(null)
     }
