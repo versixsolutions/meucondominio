@@ -1,6 +1,5 @@
 /// <reference lib="webworker" />
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
-import { clientsClaim } from 'workbox-core'
 
 declare let self: ServiceWorkerGlobalScope
 
@@ -20,7 +19,10 @@ try {
 
 // Claim clients with error handling
 try {
-  self.clientsClaim()
+  // Claim all clients to ensure service worker takes control immediately
+  if (self.clients && typeof self.clients.claim === 'function') {
+    self.clients.claim()
+  }
 } catch (err) {
   console.warn('Erro ao clamar clients:', err)
 }

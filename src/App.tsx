@@ -171,11 +171,9 @@ function ErrorFallback() {
 // Main App with Sentry
 export default function App() {
   return (
-    <Sentry.ErrorBoundary fallback={<ErrorFallback />} showDialog>
+    <Sentry.ErrorBoundary fallback={<ErrorFallback />} showDialog={false}>
       <Sentry.Profiler name="App">
         <AppRoutes />
-        <ReloadPrompt />
-        <Toaster position="top-right" />
       </Sentry.Profiler>
     </Sentry.ErrorBoundary>
   )
