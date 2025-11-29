@@ -22,32 +22,48 @@ export default function Profile() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (profile?.id) {
-      loadUserActivity()
+    if (!profile?.id) return
+    
+    let isMounted = true  // ✅ Flag para evitar memory leak
+    
+    async function loadUserActivity() {
+      try {
+        setLoading(true)
+        const userId = profile.id
+
+        // 1. Votos
+        const { data: votos } = await supabase.from('votos').select(`id, vote, voted_at, votacao:votacao_id (title)`).eq('user_id', userId).order('voted_at', { ascending: false }).limit(10)
+        // 2. Ocorrências
+        const { data: ocorrencias } = await supabase.from('ocorrencias').select('*').eq('author_id', userId).order('created_at', { ascending: false }).limit(10)
+        // 3. Chamados
+        const { data: chamados } = await supabase.from('chamados').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(10)
+
+        // ✅ Só atualiza estado se componente ainda estiver montado
+        if (!isMounted) return
+
+        const myActivities: Activity[] = []
+
+        votos?.forEach((v: any) => myActivities.push({ id: v.id, type: 'voto', title: 'Voto Registrado', description: `Você participou da votação: "${v.votacao?.title}"`, date: v.voted_at, status: 'Computado' }))
+        ocorrencias?.forEach((o: any) => myActivities.push({ id: o.id, type: 'ocorrencia', title: `Ocorrência: ${o.title}`, description: o.description, date: o.created_at, status: o.status }))
+        chamados?.forEach((c: any) => myActivities.push({ id: c.id, type: 'chamado', title: `Chamado de Suporte`, description: c.subject + (c.response ? ' (Respondido)' : ''), date: c.created_at, status: c.status }))
+
+        setActivities(myActivities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()))
+      } catch (error) { 
+        if (isMounted) {
+          console.error('Erro ao carregar atividades:', error)
+        }
+      } finally { 
+        if (isMounted) setLoading(false)
+      }
     }
-  }, [profile?.id])
 
-  async function loadUserActivity() {
-    try {
-      setLoading(true)
-      const userId = profile?.id
-
-      // 1. Votos
-      const { data: votos } = await supabase.from('votos').select(`id, vote, voted_at, votacao:votacao_id (title)`).eq('user_id', userId).order('voted_at', { ascending: false }).limit(10)
-      // 2. Ocorrências
-      const { data: ocorrencias } = await supabase.from('ocorrencias').select('*').eq('author_id', userId).order('created_at', { ascending: false }).limit(10)
-      // 3. Chamados
-      const { data: chamados } = await supabase.from('chamados').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(10)
-
-      const myActivities: Activity[] = []
-
-      votos?.forEach((v: any) => myActivities.push({ id: v.id, type: 'voto', title: 'Voto Registrado', description: `Você participou da votação: "${v.votacao?.title}"`, date: v.voted_at, status: 'Computado' }))
-      ocorrencias?.forEach((o: any) => myActivities.push({ id: o.id, type: 'ocorrencia', title: `Ocorrência: ${o.title}`, description: o.description, date: o.created_at, status: o.status }))
-      chamados?.forEach((c: any) => myActivities.push({ id: c.id, type: 'chamado', title: `Chamado de Suporte`, description: c.subject + (c.response ? ' (Respondido)' : ''), date: c.created_at, status: c.status }))
-
-      setActivities(myActivities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()))
-    } catch (error) { console.error(error) } finally { setLoading(false) }
-  }
+    loadUserActivity()
+    
+    // ✅ Cleanup para evitar memory leak
+    return () => {
+      isMounted = false
+    }
+  }, [profile?.id])  // ✅ Dependência correta
 
   async function handleLogout() {
     if (confirm('Tem certeza que deseja sair?')) {

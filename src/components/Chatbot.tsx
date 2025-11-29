@@ -101,8 +101,45 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
 
   async function handleSendMessage(e: React.FormEvent | null, textOverride?: string) {
     if (e) e.preventDefault()
-    const textToSend = textOverride || inputText
-    if (!textToSend.trim()) return
+    const textToSend = (textOverride || inputText).trim()
+    
+    // ✅ VALIDAÇÃO CRÍTICA: Verificar input antes de enviar
+    if (!textToSend) {
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        text: '⚠️ Por favor, digite uma pergunta antes de enviar.',
+        sender: 'bot',
+        timestamp: new Date(),
+        isError: true
+      }])
+      return
+    }
+
+    if (textToSend.length > 500) {
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        text: '⚠️ Sua pergunta é muito longa. Máximo 500 caracteres.',
+        sender: 'bot',
+        timestamp: new Date(),
+        isError: true
+      }])
+      return
+    }
+    
+    // ✅ VALIDAÇÃO: Condomínio obrigatório
+    if (!profile?.condominio_id) {
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        text: '❌ Seu perfil não está vinculado a um condomínio. Entre em contato com o suporte.',
+        sender: 'bot',
+        timestamp: new Date(),
+        isError: true,
+        options: [
+          { label: '📞 Ver Suporte', value: 'suporte', type: 'action' }
+        ]
+      }])
+      return
+    }
     
     const name = profile?.full_name?.split(' ')[0] || 'Morador'
     setLastQuestion(textToSend)
@@ -117,11 +154,6 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
     setIsTyping(true)
 
     try {
-      // ✅ VALIDAÇÃO ANTES DE CHAMAR API
-      if (!profile?.condominio_id) {
-        throw new Error('Condomínio não configurado. Entre em contato com o síndico.')
-      }
-
       console.log('🔍 [DEBUG] Enviando para ask-ai:', {
         query: textToSend,
         userName: name,
@@ -131,9 +163,9 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
       // ✅ CHAMADA PARA EDGE FUNCTION COM VALIDAÇÃO
       const { data, error } = await supabase.functions.invoke('ask-ai', {
         body: { 
-          query: textToSend, // ✅ GARANTIDO que não é vazio
+          query: textToSend,
           userName: name,
-          filter_condominio_id: profile.condominio_id // ✅ GARANTIDO que existe
+          filter_condominio_id: profile.condominio_id
         }
       })
 
@@ -149,7 +181,10 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
         throw new Error('Resposta vazia da API')
       }
 
-      const botResponse = data.answer || "Desculpe, não consegui processar sua pergunta no momento."
+      // ✅ Sanitizar a resposta (remover tags HTML perigosas)
+      const botResponse = (data.answer || "Desculpe, não consegui processar sua pergunta no momento.")
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove scripts
+        .replace(/on\w+\s*=/gi, '') // Remove event handlers
 
       // ✅ DETECTAR SE NÃO ENCONTROU INFORMAÇÃO
       const notFoundKeywords = ["não encontrei", "não consta", "não localizei", "desculpe", "não há", "sem informação"]
@@ -176,8 +211,8 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
       // ✅ MENSAGENS DE ERRO MAIS ESPECÍFICAS
       if (err.message?.includes('condominio_id')) {
         errorMessage = 'Seu perfil não está vinculado a um condomínio. Entre em contato com o suporte.'
-      } else if (err.message?.includes('Query não fornecida')) {
-        errorMessage = 'Erro ao processar sua pergunta. Por favor, tente novamente.'
+      } else if (err.message?.includes('Query')) {
+        errorMessage = 'Sua pergunta é inválida. Por favor, tente novamente com outras palavras.'
       } else if (err.message?.includes('500')) {
         errorMessage = 'Erro no servidor. Nossa equipe foi notificada. Tente novamente em instantes.'
       } else if (err.message) {

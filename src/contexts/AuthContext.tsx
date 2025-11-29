@@ -85,7 +85,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from('users')
         .select('*, condominios(name)')
         .eq('id', userId)
-        .maybeSingle()
+        .single()  // ✅ CORREÇÃO: Usa .single() em vez de .maybeSingle()
+        // Isso lança erro se nenhum perfil encontrado, garantindo integridade
 
       if (error) throw error
       
@@ -97,15 +98,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: (data.role as UserRole) || 'morador' 
         }
         setProfile(mappedProfile)
-      } else {
-        // CORREÇÃO CRÍTICA: Se não achou perfil, define erro e limpa perfil anterior
-        console.error('Erro de Integridade: Usuário autenticado sem perfil público.')
-        setProfile(null)
-        setAuthError('Perfil de usuário não encontrado. Entre em contato com o suporte.')
       }
     } catch (error: any) {
-      console.error('Erro ao carregar perfil:', error)
-      setAuthError(error.message || 'Erro ao carregar dados do usuário')
+      // ✅ CORREÇÃO CRÍTICA: Inconsistência detectada - logout automático
+      console.error('❌ Erro de Integridade de Dados: Usuário autenticado sem perfil público.', error)
+      setProfile(null)
+      setAuthError('Perfil de usuário não encontrado. Desconectando...')
+      
+      // Fazer logout automático se houver inconsistência
+      try {
+        await supabase.auth.signOut()
+      } catch (signOutError) {
+        console.error('Erro ao desconectar:', signOutError)
+      }
     } finally {
       setLoading(false)
     }
