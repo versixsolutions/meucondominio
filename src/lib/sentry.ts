@@ -46,11 +46,6 @@ export function initializeSentry(): void {
           return !url.includes('/health')
         },
       }),
-      new Sentry.Replay({
-        // Mask all text content, but keep media playback
-        maskAllText: true,
-        blockAllMedia: true,
-      }),
     ],
 
     // Set sample rate for performance monitoring (1% = 0.01)
@@ -149,18 +144,6 @@ export function captureMessage(message: string, level: Sentry.SeverityLevel = 'i
  */
 export function setTag(key: string, value: string | number): void {
   Sentry.setTag(key, value)
-}
-
-/**
- * Start a performance span
- * Usage: const span = startSpan('database-query')
- */
-export function startSpan(name: string) {
-  const transaction = Sentry.startTransaction({
-    name,
-    op: 'http.request',
-  })
-  return transaction
 }
 
 export default Sentry
