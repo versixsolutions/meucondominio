@@ -5,14 +5,32 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': 'https://versixnorma.com.br, https://www.versixnorma.com.br, https://app.versixnorma.com.br, http://localhost:5173, http://localhost:3000',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Max-Age': '3600'
+// ✅ ORIGENS PERMITIDAS
+const ALLOWED_ORIGINS = [
+  'https://versixnorma.com.br',
+  'https://www.versixnorma.com.br',
+  'https://app.versixnorma.com.br',
+  'http://localhost:5173',
+  'http://localhost:3000'
+]
+
+// ✅ FUNÇÃO PARA OBTER CORS HEADERS VÁLIDOS (um único origin por vez)
+function getCorsHeaders(origin?: string): Record<string, string> {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+  
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Max-Age': '3600',
+    'Content-Type': 'application/json'
+  }
 }
 
 serve(async (req) => {
+  const origin = req.headers.get('origin') || undefined
+  const corsHeaders = getCorsHeaders(origin)
+  
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -23,7 +41,7 @@ serve(async (req) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ answer: 'Não autorizado. Faça login primeiro.' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: corsHeaders }
       )
     }
 
@@ -80,7 +98,7 @@ serve(async (req) => {
           JSON.stringify({ 
             answer: '🚫 Limite de requisições atingido. Máximo 50 por hora. Tente novamente em alguns minutos.' 
           }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 429, headers: corsHeaders }
         )
       }
 
@@ -268,9 +286,7 @@ serve(async (req) => {
           answer: 'Não encontrei informações sobre isso nos documentos ou FAQs do condomínio. Você pode reformular a pergunta ou verificar se os documentos relevantes foram adicionados na Biblioteca.',
           sources: []
         }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        { headers: corsHeaders }
       )
     }
 
@@ -349,9 +365,7 @@ ${contextText}
           excerpt: r.payload.content.substring(0, 150) + '...'
         }))
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      { headers: corsHeaders }
     )
 
   } catch (error: unknown) {
@@ -362,10 +376,7 @@ ${contextText}
         answer: `Erro técnico: ${errorMessage}. Por favor, tente novamente.`,
         sources: []
       }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      { status: 500, headers: corsHeaders }
     )
   }
 })
