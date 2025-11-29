@@ -160,12 +160,21 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
         filter_condominio_id: profile.condominio_id
       })
 
-      // ✅ CHAMADA PARA EDGE FUNCTION COM VALIDAÇÃO
+      // ✅ OBTER TOKEN DE AUTENTICAÇÃO
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('Não autorizado: faça login novamente')
+      }
+
+      // ✅ CHAMADA PARA EDGE FUNCTION COM VALIDAÇÃO E AUTH HEADER
       const { data, error } = await supabase.functions.invoke('ask-ai', {
         body: { 
           query: textToSend,
           userName: name,
           filter_condominio_id: profile.condominio_id
+        },
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
         }
       })
 
