@@ -191,7 +191,7 @@ export default function NovaOcorrencia() {
             </div>
           ) : (
             <div className="relative">
-              <img src={previewUrl} alt="Preview" className="w-full h-64 object-cover rounded-xl shadow-sm" />
+              <img src={previewUrl} alt="Preview" loading="lazy" decoding="async" className="w-full h-64 object-cover rounded-xl shadow-sm" />
               <button
                 type="button"
                 onClick={() => { setPreviewUrl(null); setSelectedImage(null); }}

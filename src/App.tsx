@@ -7,22 +7,22 @@ import { useEffect, Suspense, lazy } from 'react'
 import * as Sentry from '@sentry/react'
 
 // --- PAGES PÚBLICAS ---
-import Login from './pages/Login'
-import Signup from './pages/Signup'
-import PendingApproval from './pages/PendingApproval'
+const Login = lazy(() => import('./pages/Login'))
+const Signup = lazy(() => import('./pages/Signup'))
+const PendingApproval = lazy(() => import('./pages/PendingApproval'))
 
 // --- PAGES MORADOR (Layout Padrão) ---
-import Layout from './components/Layout'
-import Dashboard from './pages/Dashboard'
-import Comunicacao from './pages/Comunicacao'
-import Suporte from './pages/Suporte'
-import Despesas from './pages/Despesas'
-import Profile from './pages/Profile'
-import FAQ from './pages/FAQ'
-import Ocorrencias from './pages/Ocorrencias'
-import NovaOcorrencia from './pages/NovaOcorrencia'
-import NovoChamado from './pages/NovoChamado'
-import MeusChamados from './pages/MeusChamados'
+const Layout = lazy(() => import('./components/Layout'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Comunicacao = lazy(() => import('./pages/Comunicacao'))
+const Suporte = lazy(() => import('./pages/Suporte'))
+const Despesas = lazy(() => import('./pages/Despesas'))
+const Profile = lazy(() => import('./pages/Profile'))
+const FAQ = lazy(() => import('./pages/FAQ'))
+const Ocorrencias = lazy(() => import('./pages/Ocorrencias'))
+const NovaOcorrencia = lazy(() => import('./pages/NovaOcorrencia'))
+const NovoChamado = lazy(() => import('./pages/NovoChamado'))
+const MeusChamados = lazy(() => import('./pages/MeusChamados'))
 const Biblioteca = lazy(() => import('./pages/Biblioteca'))
 const Comunicados = lazy(() => import('./pages/Comunicados'))
 const Votacoes = lazy(() => import('./pages/Votacoes'))
@@ -33,19 +33,19 @@ const AssembleiaDetalhes = lazy(() => import('./pages/AssembleiaDetalhes'))
 const AssembleiaPresenca = lazy(() => import('./pages/AssembleiaPresenca'))
 
 // --- PAGES ADMIN (Layout Admin) ---
-import AdminLayout from './components/admin/AdminLayout'
-import AdminDashboard from './pages/admin/AdminDashboard'
-import UserManagement from './pages/admin/UserManagement'
-import CondominioManagement from './pages/admin/CondominioManagement'
-import OcorrenciasManagement from './pages/admin/OcorrenciasManagement'
-import ComunicadosManagement from './pages/admin/ComunicadosManagement'
-import VotacoesManagement from './pages/admin/VotacoesManagement'
-import FinanceiroManagement from './pages/admin/FinanceiroManagement'
-import KnowledgeBaseManagement from './pages/admin/KnowledgeBaseManagement'
-import MarketplaceManagement from './pages/admin/MarketplaceManagement'
-import ChamadosManagement from './pages/admin/ChamadosManagement'
-import FAQImport from './pages/admin/FAQImport'
-import FinanceiroImport from './pages/admin/FinanceiroImport'
+const AdminLayout = lazy(() => import('./components/admin/AdminLayout'))
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
+const UserManagement = lazy(() => import('./pages/admin/UserManagement'))
+const CondominioManagement = lazy(() => import('./pages/admin/CondominioManagement'))
+const OcorrenciasManagement = lazy(() => import('./pages/admin/OcorrenciasManagement'))
+const ComunicadosManagement = lazy(() => import('./pages/admin/ComunicadosManagement'))
+const VotacoesManagement = lazy(() => import('./pages/admin/VotacoesManagement'))
+const FinanceiroManagement = lazy(() => import('./pages/admin/FinanceiroManagement'))
+const KnowledgeBaseManagement = lazy(() => import('./pages/admin/KnowledgeBaseManagement'))
+const MarketplaceManagement = lazy(() => import('./pages/admin/MarketplaceManagement'))
+const ChamadosManagement = lazy(() => import('./pages/admin/ChamadosManagement'))
+const FAQImport = lazy(() => import('./pages/admin/FAQImport'))
+const FinanceiroImport = lazy(() => import('./pages/admin/FinanceiroImport'))
 const AdminAssembleias = lazy(() => import('./pages/admin/AdminAssembleias'))
 
 // --- COMPONENTES DE PROTEÇÃO DE ROTA ---

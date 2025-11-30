@@ -157,7 +157,16 @@ export default function Votacoes() {
           })}
         </div>
       ) : (
-        <EmptyState icon="🗳️" title="Nenhuma votação" description="Não há pautas neste status." action={{ label: 'Ver todas', onClick: () => setFilter('all') }} />
+        <EmptyState
+          icon="🗳️"
+          title="Nenhuma votação"
+          description="Não há pautas neste status."
+          variant="votacoes"
+          actions={[
+            { label: 'Ver todas', onClick: () => setFilter('all'), variant: 'secondary' },
+            { label: 'Criar pauta', onClick: () => window.dispatchEvent(new CustomEvent('openCreateVotacaoModal')) }
+          ]}
+        />
       )}
     </PageLayout>
   )

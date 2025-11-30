@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
+import Tooltip from '../../components/ui/Tooltip'
 import PageLayout from '../../components/PageLayout'
-import { QRCodeCanvas } from 'qrcode.react'
+// QRCode será carregado dinamicamente quando necessário
 import { useAssembleias } from '../../hooks/useAssembleias'
 import { useAuth } from '../../contexts/AuthContext'
 import type { Assembleia, AssembleiaPauta } from '../../types'
@@ -26,6 +27,7 @@ export default function AdminAssembleias() {
 
   const [selected, setSelected] = useState<Assembleia | null>(null)
   const [pautas, setPautas] = useState<AssembleiaPauta[]>([])
+  const [QRCodeComp, setQRCodeComp] = useState<React.ComponentType<any> | null>(null)
 
   // Form state for new/edit assembleia
   const [newAss, setNewAss] = useState({
@@ -151,12 +153,19 @@ export default function AdminAssembleias() {
                 <button key={a.id} onClick={()=>setSelected(a)} className={`w-full text-left px-3 py-2 rounded-lg border ${selected?.id===a.id?'border-purple-400 bg-purple-50':'border-gray-200 hover:bg-gray-50'}`}>
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-gray-900">{a.titulo}</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full border" title={a.status}>
-                      {a.status === 'agendada' && '📅'}
-                      {a.status === 'em_andamento' && '🟢'}
-                      {a.status === 'encerrada' && '✅'}
-                      {a.status === 'cancelada' && '❌'}
-                    </span>
+                    <Tooltip content={
+                      a.status === 'agendada' ? 'Agendada' :
+                      a.status === 'em_andamento' ? 'Em andamento' :
+                      a.status === 'encerrada' ? 'Encerrada' :
+                      a.status === 'cancelada' ? 'Cancelada' : 'Status'
+                    }>
+                      <span className="text-xs px-2 py-0.5 rounded-full border" aria-label={`Status: ${a.status}`}>
+                        {a.status === 'agendada' && '📅'}
+                        {a.status === 'em_andamento' && '🟢'}
+                        {a.status === 'encerrada' && '✅'}
+                        {a.status === 'cancelada' && '❌'}
+                      </span>
+                    </Tooltip>
                   </div>
                   <div className="text-xs text-gray-600">{new Date(a.data_hora).toLocaleString('pt-BR')}</div>
                 </button>
@@ -217,7 +226,16 @@ export default function AdminAssembleias() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
                   <div className="md:col-span-1 flex items-center justify-center">
                     <div className="p-3 bg-white border rounded-xl">
-                      <QRCodeCanvas value={`${window.location.origin}/transparencia/assembleias/${selected.id}/presenca`} size={180} includeMargin={true} />
+                      {QRCodeComp ? (
+                        <QRCodeComp value={`${window.location.origin}/transparencia/assembleias/${selected.id}/presenca`} size={180} includeMargin={true} />
+                      ) : (
+                        <button
+                          onClick={() => import('qrcode.react').then(mod => setQRCodeComp(() => mod.QRCodeCanvas))}
+                          className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700"
+                        >
+                          Carregar QR Code
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div className="md:col-span-2 space-y-2">

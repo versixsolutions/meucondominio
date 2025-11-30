@@ -1,10 +1,14 @@
 import { useState } from 'react'
+import Tooltip from './ui/Tooltip'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useDashboardStats } from '../hooks/useDashboardStats'
 import { useTheme } from '../contexts/ThemeContext'
+import { useKeyboardShortcuts } from '../hooks/useKeyboardNavigation'
 import LoadingSpinner from './LoadingSpinner'
-import Chatbot from './Chatbot' // Importação do Chatbot
+import Chatbot from './Chatbot'
+import SkipLinks from './SkipLinks'
+import KeyboardShortcutsHelp from './KeyboardShortcutsHelp'
 
 interface NavItem {
   path: string
@@ -58,6 +62,15 @@ export default function Layout() {
   const visibleDesktopItems = desktopNavItems.filter(item => !item.adminOnly || canManage)
   const visibleMobileItems = mobileNavItems.filter(item => !item.adminOnly || canManage)
 
+  // Atalhos de teclado
+  useKeyboardShortcuts({
+    '1': () => navigate('/'),
+    's': () => navigate('/suporte'),
+    't': () => navigate('/transparencia'),
+    'p': () => navigate('/perfil'),
+    'n': () => setIsChatOpen(true),
+  })
+
   async function handleLogout() {
     if (confirm('Tem certeza que deseja sair?')) {
       await signOut()
@@ -67,10 +80,35 @@ export default function Layout() {
 
   if (loading) return <LoadingSpinner message="Carregando..." />
 
+  function prefetchRoute(path: string) {
+    switch (path) {
+      case '/':
+        import('../pages/Dashboard');
+        break;
+      case '/comunicacao':
+        import('../pages/Comunicacao');
+        break;
+      case '/suporte':
+        import('../pages/Suporte');
+        break;
+      case '/transparencia':
+        import('../pages/Transparencia');
+        break;
+      case '/perfil':
+        import('../pages/Profile');
+        break;
+      default:
+        break;
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 font-sans flex flex-col">
+      <SkipLinks />
+      
       {/* Header */}
       <header 
+        id="navigation"
         className="text-white shadow-lg sticky top-0 z-40 transition-all duration-500"
         style={{ background: theme.gradients.header }}
       >
@@ -110,6 +148,7 @@ export default function Layout() {
               {canManage && (
                 <Link 
                   to="/admin" 
+                  onMouseEnter={() => { import('../pages/admin/AdminDashboard') }}
                   className="bg-white text-primary px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-100 transition shadow-sm flex items-center gap-2 mr-2 animate-fade-in"
                 >
                   <span>⚙️</span> Painel Admin
@@ -172,6 +211,7 @@ export default function Layout() {
               <Link
                 key={item.path}
                 to={item.path}
+                onMouseEnter={() => prefetchRoute(item.path)}
                 onClick={() => setIsSidebarOpen(false)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition duration-200 ${
                   isActive(item.path) 
@@ -207,9 +247,10 @@ export default function Layout() {
       {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 pb-safe safe-area-pb">
         {/* Botão Admin Flutuante (Reposicionado ou removido se interferir com a Norma, mas mantido por segurança no topo) */}
-        {canManage && (
+          {canManage && (
           <Link 
             to="/admin" 
+            onMouseEnter={() => { import('../pages/admin/AdminDashboard') }}
             className="absolute -top-16 right-4 bg-slate-900 text-white p-2.5 rounded-full shadow-lg flex items-center justify-center hover:bg-slate-800 transition transform hover:scale-110 z-50"
             title="Painel Admin"
           >
@@ -227,6 +268,7 @@ export default function Layout() {
                 <button
                   key={item.label}
                   onClick={item.action}
+                  data-tour="chatbot-button"
                   className="relative flex flex-col items-center justify-end pb-1 group -mt-8"
                 >
                   <div 
@@ -246,24 +288,29 @@ export default function Layout() {
 
             // RENDERIZAÇÃO DOS BOTÕES NORMAIS
             return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className="relative flex flex-col items-center justify-center py-2 rounded-lg transition duration-200 h-full"
-                style={{ 
-                  color: active ? theme.colors.primary.DEFAULT : theme.colors.text.secondary,
-                }}
-              >
-                <span className={`text-xl mb-0.5 ${active ? 'scale-110' : ''} transition-transform`}>{item.icon}</span>
-                <span className={`text-[9px] font-medium truncate w-full text-center ${active ? 'font-bold' : ''}`}>
-                  {item.label}
-                </span>
-                {item.badge !== undefined && item.badge > 0 && (
-                  <span className="absolute top-1 right-2 bg-red-500 text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center border border-white">
-                    {item.badge > 9 ? '9+' : item.badge}
+              <Tooltip content={item.label} side="top" delayDuration={300}>
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onMouseEnter={() => prefetchRoute(item.path)}
+                  data-tour={item.path === '/suporte' ? 'suporte-menu' : item.path === '/transparencia' ? 'transparency' : undefined}
+                  className="relative flex flex-col items-center justify-center py-2 rounded-lg transition duration-200 h-full"
+                  style={{ 
+                    color: active ? theme.colors.primary.DEFAULT : theme.colors.text.secondary,
+                  }}
+                  aria-label={`Ir para ${item.label}`}
+                >
+                  <span className={`text-xl mb-0.5 ${active ? 'scale-110' : ''} transition-transform`}>{item.icon}</span>
+                  <span className={`text-[9px] font-medium truncate w-full text-center ${active ? 'font-bold' : ''}`}>
+                    {item.label}
                   </span>
-                )}
-              </Link>
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span className="absolute top-1 right-2 bg-red-500 text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center border border-white">
+                      {item.badge > 9 ? '9+' : item.badge}
+                    </span>
+                  )}
+                </Link>
+              </Tooltip>
             )
           })}
         </div>
@@ -271,9 +318,12 @@ export default function Layout() {
 
       {/* Componente Chatbot Global */}
       <Chatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      
+      {/* Keyboard Shortcuts Help */}
+      <KeyboardShortcutsHelp />
 
       {/* Main Content */}
-      <main className="pb-24 md:pb-8 animate-fade-in flex-1">
+      <main id="main-content" className="pb-24 md:pb-8 animate-fade-in flex-1" tabIndex={-1}>
         <Outlet />
       </main>
     </div>

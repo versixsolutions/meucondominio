@@ -183,7 +183,16 @@ export default function FAQ() {
       {/* --- Lista de Categorias (Accordion) --- */}
       <div className="space-y-4 pb-20">
         {activeCategories.length === 0 ? (
-           <EmptyState icon="🔍" title="Nada encontrado" description="Tente outro termo ou use a Norma (IA)." />
+           <EmptyState
+             icon="🔍"
+             title="Nada encontrado"
+             description="Nenhuma pergunta corresponde ao termo buscado."
+             variant="faq"
+             actions={[
+               { label: 'Limpar busca', onClick: () => setSearch(''), variant: 'secondary' },
+               { label: 'Perguntar à Norma', onClick: () => window.dispatchEvent(new CustomEvent('openChatbot')) }
+             ]}
+           />
         ) : (
           activeCategories.map(catKey => {
             const catInfo = getCategoryInfo(catKey)

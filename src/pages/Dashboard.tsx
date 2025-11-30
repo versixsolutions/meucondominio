@@ -4,8 +4,9 @@ import { useAuth } from '../contexts/AuthContext'
 import { useDashboardStats } from '../hooks/useDashboardStats'
 import { formatCurrency } from '../lib/utils'
 import { supabase } from '../lib/supabase'
-import LoadingSpinner from '../components/LoadingSpinner'
+import { DashboardSkeleton } from '../components/Skeleton'
 import Chatbot from '../components/Chatbot'
+import OnboardingTour from '../components/OnboardingTour'
 
 interface DashboardUpdate {
   id: string
@@ -189,7 +190,7 @@ export default function Dashboard() {
       </div>
 
       {/* GRID DE ATALHOS: 3 colunas */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-3 gap-3 mb-6" data-tour="dashboard-stats">
         <DashboardCard icon="📢" label="Avisos" kpi={stats.comunicados.nao_lidos > 0 ? `${stats.comunicados.nao_lidos} novos` : ''} alert={stats.comunicados.nao_lidos > 0} onClick={() => navigate('/comunicados')} />
         <DashboardCard icon="❓" label="Dúvidas" kpi={`${stats.faq.answeredThisMonth || 0} artigos`} onClick={() => navigate('/faq')} />
         <DashboardCard icon="💰" label="Contas" kpi={formatCurrency(stats.despesas.totalMes)} onClick={() => navigate('/transparencia')} accentColor="text-green-600" />

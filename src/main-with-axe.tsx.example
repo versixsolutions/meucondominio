@@ -1,0 +1,52 @@
+/**
+ * CONFIGURAÇÃO AXE-CORE PARA TESTES DE ACESSIBILIDADE
+ * Integra validação automatizada WCAG 2.1 AA/AAA
+ */
+
+import React from 'react'
+
+if (import.meta.env.DEV) {
+  // Importa axe apenas em desenvolvimento
+  import('@axe-core/react').then((axe) => {
+    axe.default(React, ReactDOM, 1000, {
+      rules: [
+        // Regras WCAG 2.1 AA
+        { id: 'color-contrast', enabled: true },
+        { id: 'aria-required-attr', enabled: true },
+        { id: 'aria-valid-attr-value', enabled: true },
+        { id: 'button-name', enabled: true },
+        { id: 'label', enabled: true },
+        { id: 'link-name', enabled: true },
+      ],
+    })
+  })
+}
+
+import ReactDOM from 'react-dom/client'
+import { StrictMode } from 'react'
+import { BrowserRouter } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext'
+import { ThemeProvider } from './contexts/ThemeContext'
+import App from './App'
+import './index.css'
+
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js').catch(() => {
+      // Silent fail
+    })
+  })
+}
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <BrowserRouter>
+      <AuthProvider>
+        <ThemeProvider>
+          <App />
+        </ThemeProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  </StrictMode>
+)

@@ -77,12 +77,19 @@ class Logger {
 
   /**
    * Capturar logs para servidor (em produção)
-   * TODO: Integrar com Sentry ou serviço similar
+   * Integrado com Sentry para monitoramento de erros
    */
-  private captureToServer(level: LogLevel, _message: string, _context?: LogContext) {
+  private captureToServer(level: LogLevel, message: string, context?: LogContext) {
     if (this.isProduction && level !== 'debug') {
-      // TODO: Enviar para Sentry/LogRocket
-      // Sentry.captureMessage(message, level)
+      // Integração com Sentry (inicializado em main.tsx)
+      if (typeof window !== 'undefined' && (window as any).Sentry) {
+        const Sentry = (window as any).Sentry
+        if (level === 'error') {
+          Sentry.captureException(new Error(message), { extra: context })
+        } else {
+          Sentry.captureMessage(message, level as any, { extra: context })
+        }
+      }
     }
   }
 }

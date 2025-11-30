@@ -187,7 +187,13 @@ export default function Comunicados() {
           {filtered.map(c => <ComunicadoCard key={c.id} comunicado={c} onMarkRead={markAsRead} />)}
         </div>
       ) : (
-        <EmptyState icon="📭" title="Nenhum comunicado" description="Não há avisos para esta categoria." action={{ label: 'Ver todos', onClick: () => setSelectedType(null) }} />
+        <EmptyState
+          icon="📭"
+          title="Nenhum comunicado"
+          description="Não há avisos para esta categoria."
+          variant="dashboard"
+          action={{ label: 'Ver todos', onClick: () => setSelectedType(null) }}
+        />
       )}
     </PageLayout>
   )

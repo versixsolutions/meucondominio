@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import Tooltip from '../../components/ui/Tooltip'
 import { supabase } from '../../lib/supabase'
 import { formatDateTime } from '../../lib/utils'
 import LoadingSpinner from '../../components/LoadingSpinner'
@@ -170,7 +171,7 @@ export default function OcorrenciasManagement() {
             >
               <div className="w-full sm:w-24 h-24 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center border border-gray-200">
                 {oco.photo_url ? (
-                  <img src={oco.photo_url} alt="Evidência" className="w-full h-full object-cover" />
+                  <img src={oco.photo_url} alt="Evidência" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-2xl">📷</span>
                 )}
@@ -179,9 +180,11 @@ export default function OcorrenciasManagement() {
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-start mb-1">
                   <h3 className="font-bold text-gray-900 truncate">{oco.title}</h3>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${STATUS_OPTIONS.find(s => s.value === oco.status)?.color || 'bg-gray-100'}`}>
-                    {STATUS_OPTIONS.find(s => s.value === oco.status)?.label || oco.status}
-                  </span>
+                  <Tooltip content={`Status: ${STATUS_OPTIONS.find(s => s.value === oco.status)?.label || oco.status}`}> 
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${STATUS_OPTIONS.find(s => s.value === oco.status)?.color || 'bg-gray-100'}`} aria-label={`Status da ocorrência: ${STATUS_OPTIONS.find(s => s.value === oco.status)?.label || oco.status}`}>
+                      {STATUS_OPTIONS.find(s => s.value === oco.status)?.label || oco.status}
+                    </span>
+                  </Tooltip>
                 </div>
                 
                 <p className="text-sm text-gray-600 line-clamp-2 mb-2">{oco.description}</p>
@@ -226,7 +229,7 @@ export default function OcorrenciasManagement() {
                 <div className="mt-4">
                   <p className="text-xs font-bold text-gray-500 uppercase mb-1">Evidência Anexada</p>
                   <a href={selectedOcorrencia.photo_url} target="_blank" rel="noreferrer">
-                    <img src={selectedOcorrencia.photo_url} alt="Evidência" className="w-full h-48 object-cover rounded-lg border border-gray-200 hover:opacity-90 transition" />
+                    <img src={selectedOcorrencia.photo_url} alt="Evidência" loading="lazy" decoding="async" className="w-full h-48 object-cover rounded-lg border border-gray-200 hover:opacity-90 transition" />
                   </a>
                 </div>
               )}

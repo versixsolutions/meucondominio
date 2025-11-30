@@ -32,3 +32,6 @@ dist-ssr
 # Vercel
 .vercel
 .env*.local
+
+*storybook.log
+storybook-static

@@ -24,10 +24,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 })
 
-// Log para debug (remover em produção)
+// Log para debug (apenas em desenvolvimento)
 if (import.meta.env.DEV) {
-  console.log('✅ Supabase inicializado com sucesso', {
-    url: supabaseUrl?.substring(0, 20) + '...',
-    hasKey: !!supabaseAnonKey
+  import('./logger').then(({ logger }) => {
+    logger.debug('Supabase inicializado com sucesso', {
+      url: supabaseUrl?.substring(0, 20) + '...',
+      hasKey: !!supabaseAnonKey
+    })
   })
 }

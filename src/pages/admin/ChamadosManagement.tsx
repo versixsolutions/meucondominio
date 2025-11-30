@@ -192,10 +192,14 @@ export default function ChamadosManagement() {
 
       {/* Lista */}
       {filteredChamados.length === 0 ? (
-        <EmptyState 
+        <EmptyState
           icon="📭"
           title={filterStatus === 'todos' ? 'Nenhum chamado' : `Nenhum chamado ${filterStatus}`}
           description="Quando os moradores enviarem mensagens, elas aparecerão aqui"
+          variant="chamados"
+          actions={filterStatus !== 'todos' ? [
+            { label: 'Ver todos', onClick: () => setFilterStatus('todos'), variant: 'secondary' }
+          ] : undefined}
         />
       ) : (
         <div className="space-y-3 bg-white rounded-xl border border-gray-200 divide-y">

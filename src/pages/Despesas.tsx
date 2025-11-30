@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import Tooltip from '../components/ui/Tooltip'
 import { supabase } from '../lib/supabase'
 import { formatCurrency, formatDate } from '../lib/utils'
 import PageLayout from '../components/PageLayout'
@@ -69,7 +70,7 @@ export default function Despesas() {
       }
 
     } catch (error) {
-      console.error('Erro ao carregar despesas:', error)
+      logger.error('Erro ao carregar despesas', error, { condominioId: profile?.condominio_id })
     } finally {
       setLoading(false)
     }
@@ -177,20 +178,29 @@ export default function Despesas() {
       subtitle="Prestação de contas e gestão financeira"
       icon="⚖️"
       headerAction={
-        <button 
-          onClick={handleExport}
-          className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg font-bold hover:bg-white/30 transition text-sm flex items-center gap-2 border border-white/30"
-        >
-          <span className="text-lg">📥</span> Exportar CSV
-        </button>
+        <Tooltip content="Exportar despesas filtradas para CSV" side="left">
+          <button 
+            onClick={handleExport}
+            className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg font-bold hover:bg-white/30 transition text-sm flex items-center gap-2 border border-white/30"
+            aria-label="Exportar despesas para CSV"
+          >
+            <span className="text-lg" role="img" aria-label="Exportar">📥</span> Exportar CSV
+          </button>
+        </Tooltip>
       }
     >
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6 sticky top-20 z-30">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="w-full md:w-auto flex items-center gap-2 bg-gray-50 p-1 rounded-lg border border-gray-200">
-            <span className="text-gray-500 pl-2">📅</span>
-            <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-transparent border-none focus:ring-0 text-gray-700 font-medium text-sm py-1"/>
-            <button onClick={() => setSelectedMonth('')} className="text-xs text-primary font-bold px-2 hover:underline" title="Ver todo o histórico">Ver Tudo</button>
+            <Tooltip content="Selecionar mês de referência" side="bottom">
+              <span className="text-gray-500 pl-2 cursor-help">📅</span>
+            </Tooltip>
+            <Tooltip content="Alterar o mês exibido" side="bottom">
+              <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-transparent border-none focus:ring-0 text-gray-700 font-medium text-sm py-1" aria-label="Selecionar mês de referência"/>
+            </Tooltip>
+            <Tooltip content="Limpar filtro de mês e mostrar todo histórico" side="bottom">
+              <button onClick={() => setSelectedMonth('')} className="text-xs text-primary font-bold px-2 hover:underline" aria-label="Ver todos os meses">Ver Tudo</button>
+            </Tooltip>
           </div>
           <div className="flex bg-gray-100 p-1 rounded-lg w-full md:w-auto">
             {(['all', 'paid', 'open'] as const).map((status) => (
@@ -204,9 +214,11 @@ export default function Despesas() {
             const configEntry = Object.values(CATEGORY_CONFIG).find(c => c.label === catLabel)
             const isSelected = selectedCategory === catLabel
             return (
-              <button key={catLabel} onClick={() => setSelectedCategory(isSelected ? null : catLabel)} className={`px-3 py-1.5 rounded-full text-xs font-semibold transition flex items-center gap-1 ${isSelected ? 'bg-primary text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                <span>{configEntry?.icon}</span> {catLabel}
-              </button>
+              <Tooltip key={catLabel} content={`${isSelected ? 'Remover filtro da' : 'Filtrar por'} categoria ${catLabel}`} side="bottom">
+                <button onClick={() => setSelectedCategory(isSelected ? null : catLabel)} className={`px-3 py-1.5 rounded-full text-xs font-semibold transition flex items-center gap-1 ${isSelected ? 'bg-primary text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`} aria-pressed={isSelected} aria-label={`${isSelected ? 'Remover filtro' : 'Filtrar por'} categoria ${catLabel}`}>
+                  <span>{configEntry?.icon}</span> {catLabel}
+                </button>
+              </Tooltip>
             )
           })}
         </div>
@@ -217,21 +229,27 @@ export default function Despesas() {
           <div>
             <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-4">Balanço do Período</h3>
             <div className="mb-4">
-              <p className="text-sm text-gray-500 mb-1">Total Pago</p>
+              <Tooltip content="Somatório de despesas quitadas" side="top">
+                <p className="text-sm text-gray-500 mb-1 cursor-help">Total Pago</p>
+              </Tooltip>
               <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalPago)}</p>
-              <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2"><div className="bg-green-500 h-1.5 rounded-full" style={{ width: '100%' }}></div></div>
+              <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2" aria-label="Indicador total pago"><div className="bg-green-500 h-1.5 rounded-full" style={{ width: '100%' }}></div></div>
             </div>
             <div>
-              <p className="text-sm text-gray-500 mb-1">A Pagar / Pendente</p>
+              <Tooltip content="Total de despesas não pagas" side="top">
+                <p className="text-sm text-gray-500 mb-1 cursor-help">A Pagar / Pendente</p>
+              </Tooltip>
               <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalPendente)}</p>
-              <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2"><div className="bg-orange-400 h-1.5 rounded-full" style={{ width: totalPendente > 0 ? '100%' : '0%' }}></div></div>
+              <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2" aria-label="Indicador total pendente"><div className="bg-orange-400 h-1.5 rounded-full" style={{ width: totalPendente > 0 ? '100%' : '0%' }}></div></div>
             </div>
           </div>
           <div className="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-400 text-center">{filteredDespesas.length} lançamentos encontrados</div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col">
-          <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-4">Evolução de Gastos (6 meses)</h3>
+          <Tooltip content="Valores de despesas agregadas por mês (últimos 6)" side="top">
+            <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-4 cursor-help">Evolução de Gastos (6 meses)</h3>
+          </Tooltip>
           <div className="flex-1 flex items-end justify-between gap-2 h-32 mt-2">
             {historyData.map((data) => {
               const isCurrentMonth = data.fullDate === selectedMonth
@@ -250,14 +268,23 @@ export default function Despesas() {
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-4">Onde gastamos mais?</h3>
+          <Tooltip content="Categorias que mais consumiram recursos" side="top">
+            <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-4 cursor-help">Onde gastamos mais?</h3>
+          </Tooltip>
           <div className="space-y-3">
             {categoryData.length > 0 ? (
               categoryData.map((cat) => {
                  const config = Object.values(CATEGORY_CONFIG).find(c => c.label === cat.label) || CATEGORY_CONFIG.default
                  return (
                   <div key={cat.label}>
-                    <div className="flex justify-between text-xs mb-1"><span className="font-medium text-gray-700 flex items-center gap-1"><span>{config.icon}</span> {cat.label}</span><span className="text-gray-500">{Math.round(cat.percent)}%</span></div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <Tooltip content={`Categoria: ${cat.label}`} side="right">
+                        <span className="font-medium text-gray-700 flex items-center gap-1 cursor-help"><span>{config.icon}</span> {cat.label}</span>
+                      </Tooltip>
+                      <Tooltip content={`Percentual relativo ao total (${Math.round(cat.percent)}%)`} side="left">
+                        <span className="text-gray-500 cursor-help">{Math.round(cat.percent)}%</span>
+                      </Tooltip>
+                    </div>
                     <div className="w-full bg-gray-100 rounded-full h-2"><div className={`h-2 rounded-full ${config.barColor}`} style={{ width: `${cat.percent}%` }}></div></div>
                   </div>
                  )
@@ -296,9 +323,11 @@ export default function Despesas() {
                   {(despesa.receipt_url || isPaid) && (
                     <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-3">
                       {despesa.receipt_url ? (
-                        <button className="flex items-center gap-1.5 text-primary text-xs sm:text-sm font-semibold hover:underline">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> Comprovante
-                        </button>
+                        <Tooltip content="Visualizar comprovante/documento desta despesa" side="top">
+                          <button className="flex items-center gap-1.5 text-primary text-xs sm:text-sm font-semibold hover:underline" aria-label="Abrir comprovante da despesa" onClick={() => window.open(despesa.receipt_url!, '_blank', 'noopener') }>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> Comprovante
+                          </button>
+                        </Tooltip>
                       ) : (<span className="text-xs text-gray-300 italic"></span>)}
                       {isPaid && <span className="text-xs text-gray-500">Pago em: {formatDate(despesa.paid_at!)}</span>}
                     </div>
@@ -309,7 +338,13 @@ export default function Despesas() {
           })}
         </div>
       ) : (
-        <EmptyState icon="📊" title="Nenhum lançamento encontrado" description="Não há despesas para exibir neste período." action={{ label: 'Limpar Filtros', onClick: () => { setSelectedCategory(null); setStatusFilter('all'); setSelectedMonth('') }}} />
+        <EmptyState
+          icon="📊"
+          title="Nenhum lançamento encontrado"
+          description="Não há despesas para exibir neste período."
+          variant="transparency"
+          action={{ label: 'Limpar Filtros', onClick: () => { setSelectedCategory(null); setStatusFilter('all'); setSelectedMonth('') }}}
+        />
       )}
     </PageLayout>
   )

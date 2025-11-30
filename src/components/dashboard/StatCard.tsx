@@ -1,4 +1,5 @@
-import { ReactNode } from 'react'
+import { ReactNode, memo } from 'react'
+import Tooltip from '../ui/Tooltip'
 
 interface StatCardProps {
   title: string
@@ -13,7 +14,7 @@ interface StatCardProps {
   onClick?: () => void
 }
 
-export default function StatCard({
+function StatCard({
   title,
   value,
   subtitle,
@@ -36,13 +37,17 @@ export default function StatCard({
           {icon}
         </div>
         {trend && (
-          <span
-            className={`text-xs font-bold ${
-              trend.isPositive ? 'text-green-600' : 'text-red-600'
-            }`}
-          >
-            {trend.isPositive ? '↗' : '↘'} {Math.abs(trend.value)}%
-          </span>
+          <Tooltip content={trend.isPositive ? 'Indicador de crescimento' : 'Indicador de queda'} side="left">
+            <span
+              className={`text-xs font-bold ${
+                trend.isPositive ? 'text-green-600' : 'text-red-600'
+              }`}
+              aria-label={trend.isPositive ? `Cresceu ${Math.abs(trend.value)}%` : `Caiu ${Math.abs(trend.value)}%`}
+              role="img"
+            >
+              {trend.isPositive ? '↗' : '↘'} {Math.abs(trend.value)}%
+            </span>
+          </Tooltip>
         )}
       </div>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{title}</p>
@@ -53,3 +58,5 @@ export default function StatCard({
     </div>
   )
 }
+
+export default memo(StatCard)

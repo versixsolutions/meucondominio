@@ -124,7 +124,7 @@ export default function Signup() {
       <div className="min-h-screen bg-gradient-to-br from-primary to-secondary flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center animate-fade-in">
           <div className="text-center mb-8">
-            <img src={logo} alt="Versix" className="w-40 h-auto mx-auto mb-4" />
+            <img src={logo} alt="Versix" className="w-40 h-auto mx-auto mb-4" decoding="async" fetchpriority="high" />
             <h1 className="text-3xl font-bold text-gray-900">Quase lá!</h1>
           </div>
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
@@ -145,7 +145,7 @@ export default function Signup() {
     <div className="min-h-screen bg-gradient-to-br from-primary to-secondary flex items-center justify-center p-4 py-8">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 md:p-8 animate-fade-in my-4">
         <div className="text-center mb-6">
-          <img src={logo} alt="Versix" className="w-32 h-auto mx-auto mb-2" />
+          <img src={logo} alt="Versix" className="w-32 h-auto mx-auto mb-2" decoding="async" />
           <h1 className="text-2xl font-bold text-gray-900">Meu Condomínio</h1>
           <p className="text-gray-600 text-sm">Crie sua conta de morador</p>
         </div>

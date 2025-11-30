@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { sanitizeHTML } from '../lib/sanitize'
+import { logger } from '../lib/logger'
 
 interface ChatOption {
   label: string
@@ -154,7 +156,7 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
     setIsTyping(true)
 
     try {
-      console.log('🔍 [DEBUG] Enviando para ask-ai:', {
+      logger.debug('Enviando para ask-ai', {
         query: textToSend,
         userName: name,
         filter_condominio_id: profile.condominio_id
@@ -178,10 +180,10 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
         }
       })
 
-      console.log('📊 [DEBUG] Resposta ask-ai:', { data, error })
+      logger.debug('Resposta ask-ai', { data, error })
 
       if (error) {
-        console.error('❌ [DEBUG] Erro da API:', error)
+        logger.error('Erro da API ask-ai', error)
         throw error
       }
 
@@ -190,10 +192,8 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
         throw new Error('Resposta vazia da API')
       }
 
-      // ✅ Sanitizar a resposta (remover tags HTML perigosas)
-      const botResponse = (data.answer || "Desculpe, não consegui processar sua pergunta no momento.")
-        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove scripts
-        .replace(/on\w+\s*=/gi, '') // Remove event handlers
+      // ✅ Sanitizar a resposta com DOMPurify
+      const botResponse = sanitizeHTML(data.answer || "Desculpe, não consegui processar sua pergunta no momento.")
 
       // ✅ DETECTAR SE NÃO ENCONTROU INFORMAÇÃO
       const notFoundKeywords = ["não encontrei", "não consta", "não localizei", "desculpe", "não há", "sem informação"]
@@ -213,7 +213,10 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
       }])
 
     } catch (err: any) {
-      console.error('❌ [DEBUG] Erro completo:', err)
+      logger.error('Erro ao enviar mensagem para chatbot', err, {
+        userId: user?.id,
+        condominioId: profile?.condominio_id
+      })
       
       let errorMessage = 'Estou com dificuldade de conexão no momento. '
       
@@ -247,7 +250,12 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
   if (!isOpen) return null
 
   return (
-    <div className="fixed bottom-4 right-4 left-4 md:left-auto md:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden z-50 h-[500px] animate-fade-in-up">
+    <div 
+      className="fixed bottom-4 right-4 left-4 md:left-auto md:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden z-50 h-[500px] animate-fade-in-up"
+      role="dialog"
+      aria-label="Chat com assistente Norma"
+      aria-modal="true"
+    >
       {/* Header */}
       <div className="bg-gradient-to-r from-primary to-secondary p-3 text-white flex justify-between items-center cursor-pointer" onClick={onClose}>
         <div className="flex items-center gap-3">
@@ -265,6 +273,7 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
         <button 
           onClick={(e) => { e.stopPropagation(); onClose(); }} 
           className="text-white/80 hover:text-white p-1 hover:bg-white/10 rounded transition"
+          aria-label="Fechar chat"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -273,7 +282,7 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 bg-gray-50 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 bg-gray-50 space-y-4" role="log" aria-live="polite" aria-atomic="false">
         {messages.map((msg) => (
           <div key={msg.id} className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
             <div className={`max-w-[85%] p-3 rounded-2xl text-sm shadow-sm ${
@@ -302,6 +311,7 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
                   <button 
                     key={opt.value} 
                     onClick={() => handleOptionClick(opt)} 
+                    aria-label={`Opção: ${opt.label}`}
                     className={`text-xs font-bold px-3 py-2 rounded-lg transition shadow-sm border flex items-center gap-2 ${
                       opt.type === 'action' 
                         ? 'bg-white border-orange-200 text-orange-600 hover:bg-orange-50' 

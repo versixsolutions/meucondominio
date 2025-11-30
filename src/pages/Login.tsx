@@ -37,7 +37,7 @@ export default function Login() {
       navigate('/', { replace: true }) 
       
     } catch (err: any) {
-      console.error('Erro no login:', err)
+      logger.error('Erro no login', err, { email })
       // Mensagens de erro amigáveis
       if (err.message.includes('Invalid login credentials')) {
         setError('Email ou senha incorretos. Verifique e tente novamente.')

@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext' // Importar useAuth
 import { formatDateTime } from '../lib/utils'
 import PageLayout from '../components/PageLayout'
-import LoadingSpinner from '../components/LoadingSpinner'
+import { PageSkeleton } from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
 
 interface Ocorrencia {
@@ -87,7 +87,7 @@ export default function Ocorrencias() {
     resolvidas: ocorrencias.filter(o => o.status === 'resolvido').length,
   }
 
-  if (loading) return <LoadingSpinner message="Carregando ocorrências..." />
+  if (loading) return <PageSkeleton />
 
   return (
     <PageLayout
@@ -224,7 +224,11 @@ export default function Ocorrencias() {
           icon="🎉"
           title="Nenhuma ocorrência"
           description="Não há registros com este filtro."
-          action={{ label: 'Limpar Filtros', onClick: () => { setSelectedStatus(null); setShowOnlyMine(false); } }}
+          variant="occurrences"
+          actions={[
+            { label: 'Limpar Filtros', onClick: () => { setSelectedStatus(null); setShowOnlyMine(false); }, variant: 'secondary' },
+            { label: 'Registrar Ocorrência', onClick: () => window.location.href = '/nova-ocorrencia' }
+          ]}
         />
       )}
     </PageLayout>

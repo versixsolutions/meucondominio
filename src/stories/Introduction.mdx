@@ -1,0 +1,70 @@
+# Versix Norma - Design System
+
+Bem-vindo à documentação do Design System do **Versix Norma**, o portal do morador desenvolvido pela Versix Solutions.
+
+## 🎯 Objetivos
+
+Este design system documenta os componentes, padrões e diretrizes de interface do projeto, garantindo:
+
+- **Consistência visual** em toda a aplicação
+- **Acessibilidade WCAG 2.1 AA** em todos os componentes
+- **Performance otimizada** com code-splitting e lazy loading
+- **Reutilização de código** através de componentes bem documentados
+
+## 📚 Estrutura
+
+### Components
+Componentes React reutilizáveis organizados por categoria:
+- **UI**: Elementos básicos (Modal, Tooltip, Button, Badge)
+- **Dashboard**: Componentes específicos de dashboard (StatCard)
+- **Layout**: Estruturas de página (PageLayout, EmptyState)
+- **Loading**: Estados de carregamento (Skeleton, LoadingSpinner)
+
+### Design System
+Fundamentos visuais:
+- **Colors**: Paleta de cores validada com WCAG 2.1 AA
+- **Typography**: Hierarquia tipográfica e escalas de tamanho
+
+## ✅ Acessibilidade
+
+Todos os componentes implementam:
+- Contraste WCAG 2.1 AA mínimo de 4.5:1
+- Navegação por teclado (Tab, Enter, ESC)
+- ARIA labels e roles apropriados
+- Focus visível em elementos interativos
+- Validação automatizada com @axe-core/react
+
+## 🚀 Performance
+
+- **Code-splitting**: React.lazy() em todas as páginas
+- **Memoização**: React.memo() em componentes pesados
+- **Lazy loading**: Imagens e bibliotecas pesadas carregadas sob demanda
+- **Prefetch**: Rotas pré-carregadas em hover
+
+## 🎨 Características UX
+
+- **Skeleton loaders** contextuais para melhor feedback visual
+- **Tooltips estratégicos** para reduzir ambiguidade
+- **Empty states refinados** com CTAs e orientações claras
+- **Onboarding tour** interativo para novos usuários
+
+## 📦 Tecnologias
+
+- React 18
+- TypeScript
+- Tailwind CSS
+- Vite
+- Radix UI (componentes acessíveis)
+- Supabase (backend)
+
+## 🔗 Links Úteis
+
+- [Repositório GitHub](https://github.com/versixsolutions/norma)
+- [WCAG 2.1 Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
+- [Radix UI](https://www.radix-ui.com/)
+
+---
+
+**Versão:** 2.0  
+**Última atualização:** 30 de Novembro de 2025  
+**Status:** Pronto para Produção ✅

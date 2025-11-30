@@ -1,4 +1,4 @@
-import { jsPDF } from 'jspdf';
+// Importação dinâmica será usada dentro da função para evitar carregar jsPDF no bundle inicial
 import { supabase } from './supabase';
 import type { Assembleia, AssembleiaPauta, ResultadoVotacao } from '../types';
 
@@ -66,7 +66,8 @@ export async function exportarResultadosAssembleiaPDF(assembleiaId: string) {
       pautasComResultados.push({ ...pauta, resultado });
     }
 
-    // Gerar PDF
+    // Carrega jsPDF somente quando necessário
+    const { jsPDF } = await import('jspdf');
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();

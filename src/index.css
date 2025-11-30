@@ -1,6 +1,58 @@
+/* ============================================
+   IMPORTAÇÃO DE CORES ACESSÍVEIS WCAG AA/AAA
+   ============================================ */
+@import './styles/a11y-colors.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================
+   SKIP LINKS (Navegação Rápida)
+   ============================================ */
+
+.skip-links {
+  position: fixed;
+  top: -200px;
+  left: 0;
+  z-index: 9999;
+  background: var(--primary, #1F4080);
+  padding: 0.5rem 1rem;
+  transition: top 0.3s;
+}
+
+.skip-links--visible {
+  top: 0;
+}
+
+.skip-link {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  margin: 0 0.25rem;
+  background: white;
+  color: var(--primary, #1F4080);
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.skip-link:focus {
+  outline: 3px solid var(--primary, #1F4080);
+  outline-offset: 2px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.skip-link:hover {
+  background: var(--primary-light, #3366CC);
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* ============================================
+   VARIÁVEIS GLOBAIS
+   ============================================ */
 
 /* ============================================
    BASE STYLES

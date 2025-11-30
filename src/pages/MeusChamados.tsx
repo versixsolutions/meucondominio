@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useChamados } from '../hooks/useChamados'
 import PageLayout from '../components/PageLayout'
-import LoadingSpinner from '../components/LoadingSpinner'
+import { ListSkeleton } from '../components/Skeleton'
 
 export default function MeusChamados() {
   const { chamados, loading } = useChamados()
@@ -36,7 +36,11 @@ export default function MeusChamados() {
     })
   }
 
-  if (loading) return <LoadingSpinner message="Carregando seus chamados..." />
+  if (loading) return (
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <ListSkeleton items={5} />
+    </div>
+  )
 
   return (
     <PageLayout 

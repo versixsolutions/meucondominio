@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
+import Tooltip from '../components/ui/Tooltip'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAssembleias } from '../hooks/useAssembleias'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { exportarResultadosAssembleiaPDF } from '../lib/pdfExportAssembleias'
-import { QRCodeCanvas } from 'qrcode.react'
 import PageLayout from '../components/PageLayout'
 import LoadingSpinner from '../components/LoadingSpinner'
 import toast from 'react-hot-toast'
@@ -25,6 +24,7 @@ export default function AssembleiaDetalhes() {
   const [jaRegistrado, setJaRegistrado] = useState(false)
   const [exportandoPDF, setExportandoPDF] = useState(false)
   const [showQR, setShowQR] = useState(false)
+  const [QRCodeComp, setQRCodeComp] = useState<React.ComponentType<any> | null>(null)
 
   useEffect(() => {
     if (id) {
@@ -126,7 +126,8 @@ export default function AssembleiaDetalhes() {
 
     setExportandoPDF(true)
     toast.loading('Gerando PDF...')
-    
+    // Importação dinâmica somente quando usuário solicita exportação
+    const { exportarResultadosAssembleiaPDF } = await import('../lib/pdfExportAssembleias')
     const result = await exportarResultadosAssembleiaPDF(id)
     
     setExportandoPDF(false)
@@ -138,6 +139,15 @@ export default function AssembleiaDetalhes() {
       toast.error('Erro ao exportar PDF')
     }
   }
+
+  // Carrega QRCode somente quando modal é aberto
+  useEffect(() => {
+    if (showQR && !QRCodeComp) {
+      import('qrcode.react').then(mod => {
+        setQRCodeComp(() => mod.QRCodeCanvas)
+      }).catch(err => console.error('Falha ao carregar QRCode:', err))
+    }
+  }, [showQR, QRCodeComp])
 
   async function handleVotar(pautaId: string, opcao: string) {
     const success = await votar(pautaId, opcao)
@@ -181,10 +191,19 @@ export default function AssembleiaDetalhes() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-bold text-lg">
-                {assembleia.status === 'em_andamento' && '🟢 Assembleia em Andamento'}
-                {assembleia.status === 'agendada' && '📅 Assembleia Agendada'}
-                {assembleia.status === 'encerrada' && '✅ Assembleia Encerrada'}
-                {assembleia.status === 'cancelada' && '❌ Assembleia Cancelada'}
+                <Tooltip content={
+                  assembleia.status === 'em_andamento' ? 'A assembleia está ocorrendo agora.' :
+                  assembleia.status === 'agendada' ? 'A assembleia ainda não começou.' :
+                  assembleia.status === 'encerrada' ? 'A assembleia foi finalizada.' :
+                  assembleia.status === 'cancelada' ? 'A assembleia foi cancelada.' : 'Status'
+                }>
+                  <span aria-label={`Status da assembleia: ${assembleia.status}`}>
+                    {assembleia.status === 'em_andamento' && '🟢 Assembleia em Andamento'}
+                    {assembleia.status === 'agendada' && '📅 Assembleia Agendada'}
+                    {assembleia.status === 'encerrada' && '✅ Assembleia Encerrada'}
+                    {assembleia.status === 'cancelada' && '❌ Assembleia Cancelada'}
+                  </span>
+                </Tooltip>
               </h3>
               <p className="text-sm text-gray-600 mt-1">
                 {presencas.length} presença{presencas.length !== 1 ? 's' : ''} registrada{presencas.length !== 1 ? 's' : ''}
@@ -366,7 +385,11 @@ export default function AssembleiaDetalhes() {
             </div>
             <div className="flex items-center justify-center mb-4">
               <div className="p-3 bg-white border rounded-xl">
-                <QRCodeCanvas value={`${window.location.origin}/transparencia/assembleias/${assembleia.id}/presenca`} size={220} includeMargin={true} />
+                {QRCodeComp ? (
+                  <QRCodeComp value={`${window.location.origin}/transparencia/assembleias/${assembleia.id}/presenca`} size={220} includeMargin={true} />
+                ) : (
+                  <div className="w-[220px] h-[220px] flex items-center justify-center text-gray-500 text-sm">Carregando QR...</div>
+                )}
               </div>
             </div>
             <div className="text-sm text-gray-700 break-all mb-4">

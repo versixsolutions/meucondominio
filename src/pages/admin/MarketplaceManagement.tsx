@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import Tooltip from '../../components/ui/Tooltip'
 import { supabase } from '../../lib/supabase'
 import { useAdmin } from '../../contexts/AdminContext'
 import LoadingSpinner from '../../components/LoadingSpinner'
@@ -150,7 +151,7 @@ export default function MarketplaceManagement() {
           {ads.map((ad) => (
             <div key={ad.id} className={`bg-white rounded-xl shadow-sm border overflow-hidden group ${ad.active ? 'border-gray-200' : 'border-red-200 opacity-75 grayscale'}`}>
               <div className="relative h-32 bg-gray-100">
-                <img src={ad.image_url} alt={ad.title} className="w-full h-full object-cover" />
+                <img src={ad.image_url} alt={ad.title} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 {!ad.active && (
                   <div className="absolute inset-0 bg-white/50 flex items-center justify-center backdrop-blur-sm">
                     <span className="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded uppercase">Inativo</span>
@@ -180,19 +181,24 @@ export default function MarketplaceManagement() {
                 </div>
 
                 <div className="flex gap-2">
-                  <button 
-                    onClick={() => handleToggleActive(ad)}
-                    className={`flex-1 py-2 rounded-lg text-xs font-bold border transition ${ad.active ? 'text-red-600 border-red-200 hover:bg-red-50' : 'text-green-600 border-green-200 hover:bg-green-50'}`}
-                  >
-                    {ad.active ? 'Pausar' : 'Ativar'}
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(ad.id)}
-                    className="px-3 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-50 border border-gray-200"
-                    title="Excluir"
-                  >
-                    🗑️
-                  </button>
+                  <Tooltip content={ad.active ? 'Pausar a exibição deste banner' : 'Ativar banner para usuários'} side="top">
+                    <button 
+                      onClick={() => handleToggleActive(ad)}
+                      className={`flex-1 py-2 rounded-lg text-xs font-bold border transition ${ad.active ? 'text-red-600 border-red-200 hover:bg-red-50' : 'text-green-600 border-green-200 hover:bg-green-50'}`}
+                      aria-label={ad.active ? 'Pausar anúncio' : 'Ativar anúncio'}
+                    >
+                      {ad.active ? 'Pausar' : 'Ativar'}
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="Excluir permanentemente" side="top">
+                    <button 
+                      onClick={() => handleDelete(ad.id)}
+                      className="px-3 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-50 border border-gray-200"
+                      aria-label="Excluir anúncio"
+                    >
+                      🗑️
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             </div>

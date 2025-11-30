@@ -260,10 +260,11 @@ export default function Biblioteca() {
       {loading ? (
         <LoadingSpinner />
       ) : !targetCondominioId && isAdmin ? (
-        <EmptyState 
-          icon="👆" 
-          title="Selecione um Condomínio" 
-          description="Escolha um condomínio na lista acima para visualizar a biblioteca." 
+        <EmptyState
+          icon="👆"
+          title="Selecione um Condomínio"
+          description="Escolha um condomínio na lista acima para visualizar a biblioteca."
+          variant="documents"
         />
       ) : (
         <>
@@ -316,7 +317,11 @@ export default function Biblioteca() {
             <EmptyState
               icon="📭"
               title={searchTerm ? "Nenhum documento encontrado" : "Biblioteca vazia"}
-              description="Nenhum documento foi publicado neste condomínio ainda."
+              description={searchTerm ? "Tente outro termo de busca." : "Nenhum documento foi publicado neste condomínio ainda."}
+              variant="documents"
+              actions={searchTerm ? [
+                { label: 'Limpar busca', onClick: () => window.dispatchEvent(new CustomEvent('clearDocSearch')), variant: 'secondary' }
+              ] : undefined}
             />
           ) : (
             <div className="space-y-4">

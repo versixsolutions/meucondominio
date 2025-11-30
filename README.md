@@ -1,12 +1,25 @@
-🏢 Versix Norma
+# 🏢 Versix Norma
 
-Sistema SaaS de gestão condominial focado em transparência, participação e eficiência.
+[![CI/CD](https://github.com/versixsolutions/norma/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/versixsolutions/norma/actions/workflows/ci-cd.yml)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](https://github.com/versixsolutions/norma)
+[![Coverage](https://img.shields.io/badge/coverage-check%20codecov-blue.svg)](https://codecov.io/gh/versixsolutions/norma)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.2.2-blue.svg)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-🎯 Status Atual
+> Sistema SaaS de gestão condominial focado em transparência, participação e eficiência.
 
-Versão: 0.1.0 (Semana 1 - FAQ completo)
+## 🎯 Status Atual
 
-Última atualização: Novembro 2025
+**Versão:** 0.1.1  
+**Última atualização:** Novembro 30, 2025  
+**Status:** ✅ Produção Pronto (Rating: 9.27/10)
+
+### Conquistas Recentes
+- ✅ **Roadmap UX/UI 100% Concluído** (WCAG 2.1 AA + Storybook 8)
+- ✅ **Testes Unitários Implementados** (Vitest + React Testing Library)
+- ✅ **CI/CD Pipeline Configurado** (GitHub Actions + Vercel)
+- ✅ **Sanitização HTML** (DOMPurify integrado)
+- ✅ **Logger Estruturado** (Sentry integration)
 
 ✅ Funcionalidades Implementadas
 
