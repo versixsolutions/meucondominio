@@ -1,5 +1,7 @@
-const HF_API_URL =
-  'https://router.huggingface.co/sentence-transformers/all-MiniLM-L6-v2'
+// Embeddings com HuggingFace usando fetch (Deno Edge Functions não suportam npm packages)
+// Usar endpoint correto conforme documentação atualizada
+
+const HF_API_URL = 'https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2'
 
 interface EmbeddingResponse {
   embedding: number[]
