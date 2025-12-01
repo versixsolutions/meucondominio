@@ -2,10 +2,14 @@ import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
+const isCI = process.env.CI === 'true'
+
 export default defineConfig({
-  plugins: [react({
-    jsxRuntime: 'automatic'
-  })],
+  plugins: [
+    react({
+      jsxRuntime: 'automatic',
+    }),
+  ],
   test: {
     globals: true,
     environment: 'jsdom',
@@ -22,20 +26,25 @@ export default defineConfig({
         '**/types/',
         'cypress/',
         'scripts/',
-        'supabase/'
+        'supabase/',
       ],
       include: ['src/**/*.{ts,tsx}'],
-      thresholds: {
-        lines: 70,
-        functions: 70,
-        branches: 70,
-        statements: 70
-      }
-    }
+      // In CI, rely on workflow's coverage gate; locally keep strict thresholds
+      ...(isCI
+        ? {}
+        : {
+            thresholds: {
+              lines: 70,
+              functions: 70,
+              branches: 70,
+              statements: 70,
+            },
+          }),
+    },
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
-    }
-  }
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
 })
