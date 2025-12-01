@@ -301,6 +301,28 @@ Status do Repositório: ✅ PRONTO PARA PRODUÇÃO (com setup Supabase)
 
 ================================================================================
 
+## 🧪 Testes e Cobertura (Snapshot 30/Nov/2025)
+
+```
+Test Files: 25 passed | 1 skipped (26)
+Tests:      210 passed | 16 skipped (226)
+Coverage (Vitest V8):
+   All files → Lines 16.06% | Statements 15.15% | Branches 13.87% | Funcs 14.77%
+Diretórios:
+   components 40.21% | contexts 69.36% | pages 14.49%
+```
+
+### Evolução recente
+- Novos testes: `src/contexts/AuthContext.test.tsx` (18), `src/components/Layout.test.tsx` (8), `src/pages/Comunicados.test.tsx` (20)
+- Objetivo de médio prazo: cobertura 70%+
+- Próximos alvos: `Profile.tsx`, `Suporte.tsx`, hooks React Query de alto impacto
+
+### Ações recomendadas
+- Configurar secrets do GitHub Actions: `CODECOV_TOKEN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`
+- Validar pipeline em `develop` com upload de coverage para Codecov
+
+================================================================================
+
 🎯 PRÓXIMA AÇÃO IMEDIATA:
 
 1. Abrir SETUP_SUPABASE.md

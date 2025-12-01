@@ -1,7 +1,7 @@
 # 🔬 ANÁLISE PROFUNDA VERSIX NORMA - DEZEMBRO 2025
 
-**Data da Análise:** 30 de Dezembro de 2025  
-**Analista:** GitHub Copilot (Claude Sonnet 4.5)  
+**Data da Análise:** 30 de Novembro de 2025  
+**Analista:** GitHub Copilot (GPT-5)  
 **Versão Analisada:** 0.1.1  
 **Status:** 🟢 PRODUCTION READY
 
@@ -9,40 +9,44 @@
 
 ## 📊 EXECUTIVE SUMMARY
 
-O projeto **Versix Norma** alcançou maturidade técnica excepcional após implementação completa do roadmap estratégico. Esta análise estabelece rating multidimensional atualizado e identifica próximas oportunidades de evolução.
+Com base nas análises anteriores (29 Nov/2025 e status final) e no estado atual medido em 30 Nov/2025, consolidamos a evolução e atualizamos os ratings.
+
+### Indicadores Atuais (medidos)
+```
+Test Files: 25 passed | 1 skipped (26)
+Tests: 210 passed | 16 skipped (226)
+Coverage (Vitest V8):
+  All files → Lines 16.06% | Statements 15.15% | Branches 13.87% | Funcs 14.77%
+  components → 40.21% | contexts → 69.36% | pages → 14.49%
+```
 
 ### Status Geral do Projeto (Atualizado)
 ```
-🎯 Maturidade Geral:      █████████░ 95% (+2% desde Nov/2025)
+🎯 Maturidade Geral:      █████████░ 94% (↑ frente Nov/2025)
 ✅ Funcionalidades MVP:    █████████░ 95%
 🔒 Segurança:             ██████████ 100%
-⚡ Performance:            █████████░ 92% (+2% React Query)
-🧪 Testabilidade:         ████████░░ 80% (+5% novos testes)
+⚡ Performance:            █████████░ 92%
+🧪 Testabilidade:         ███████░░░ 80% (processo ativo; cobertura 16%)
 📚 Documentação:          ██████████ 100%
 ♿ Acessibilidade:         █████████░ 95%
 🎨 UX/UI:                 █████████░ 95%
-🏗️ Arquitetura:           █████████░ 96% (+1% refatoração)
+🏗️ Arquitetura:           █████████░ 96%
 ```
 
-### Principais Conquistas Recentes (Últimos 7 dias)
+### Conquistas recentes (últimos dias)
 
-✅ **React Query Completo** (3 módulos migrados)
-- `useAssembleiasQuery`, `useComunicadosQuery`, `useChamadosQuery`
-- Cache automático (staleTime: 1-2min, gcTime: 10min)
-- Atualizações otimistas com rollback
-- 10 hooks criados com invalidação inteligente
+✅ Expansão de testes unitários e de integração
+- Novos suites: `AuthContext`, `Layout`, `Comunicados` (46+ testes)
+- Total atual: 226 testes (210 passando, 16 skipped)
+- Cobertura global: 15.15% stmts | 16.06% lines (de ~9.56%)
 
-✅ **Refatoração de Componentes** (11 subcomponentes)
-- Chatbot: 360 → 50 linhas (-86%)
-- AdminAssembleias: 300 → 180 linhas (-40%)
-- AssembleiaDetalhes: 445 → 350 linhas (-21%)
-- Hook customizado `useChatbot` (250+ linhas)
+✅ Contextos e componentes com cobertura alta
+- `contexts`: 69.36% (quase meta)
+- `components`: 40.21% (em progresso)
 
-✅ **Cobertura de Testes Expandida** (16 → 20 testes)
-- useChatbot.test.tsx: 4 testes (100% aprovação)
-- Logger: 100% coverage
-- Sanitize: 100% coverage
-- useAuth: cobertura básica
+✅ Pipeline de qualidade consistente
+- Build e testes estáveis
+- Commit e push em `main` ativados
 
 ---
 
@@ -167,7 +171,7 @@ onSettled: () => {
 ---
 
 ### 3. TESTABILIDADE
-**Score: 8.0/10** ⭐⭐⭐⭐ (↑ +0.5)
+**Score: 8.0/10** ⭐⭐⭐⭐ (mantido)
 
 #### ✅ Progressos Significativos
 
@@ -177,15 +181,14 @@ onSettled: () => {
 - Mocks globais (Supabase, AuthContext)
 - Scripts: `test`, `test:ui`, `test:coverage`
 
-**Cobertura Atual**
+**Cobertura Atual (medida em 30 Nov/2025)**
 ```
-Total de Testes:      20 (↑ de 16)
-Taxa de Sucesso:      100%
-Arquivos Testados:    4
-- logger.test.ts:     6 testes (100% coverage)
-- sanitize.test.ts:   8 testes (100% coverage)
-- useAuth.test.ts:    2 testes (básico)
-- useChatbot.test.tsx: 4 testes (100% coverage)
+Test Files: 25 passed | 1 skipped (26)
+Tests: 210 passed | 16 skipped (226)
+Coverage:
+  Lines 16.06% | Statements 15.15% | Branches 13.87% | Funcs 14.77%
+Diretórios:
+  components 40.21% | contexts 69.36% | pages 14.49%
 ```
 
 **Hooks Testados**
@@ -225,8 +228,8 @@ Arquivos Testados:    4
 **Estimativa de Cobertura Real**
 ```
 Arquivos Fonte:       ~150 (ts/tsx)
-Arquivos Testados:    4
-Cobertura Estimada:   ~12% (precisa atingir 70%)
+Suites ativas:        26
+Cobertura Medida:     ~16% linhas (meta 70%)
 ```
 
 ---
@@ -365,7 +368,7 @@ hooks/
 ---
 
 ### 7. CI/CD E DEVOPS
-**Score: 9.8/10** ⭐⭐⭐⭐⭐ (Mantido)
+**Score: 9.8/10** ⭐⭐⭐⭐⭐ (mantido)
 
 #### ✅ Pipeline Completo
 
@@ -396,9 +399,8 @@ Jobs:
 #### ⚠️ Pontos de Atenção (0.2 pontos)
 
 **Secrets GitHub Pendentes**
-- CODECOV_TOKEN não configurado
-- SENTRY_AUTH_TOKEN não configurado
-**Impacto:** Baixo (pipeline funciona, mas sem integração completa)
+- CODECOV_TOKEN, SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT
+**Impacto:** Baixo (pipeline funciona; integrações melhoram visibilidade)
 
 ---
 
@@ -543,8 +545,8 @@ createChamado.mutate({ subject, description })
 ```
 
 **Evolução do Rating:**
-- Nov/2025: 9.27/10
-- Dez/2025: 9.33/10 (↑ +0.06)
+- 29 Nov/2025: 9.27/10
+- 30 Nov/2025: 9.33/10 (↑ +0.06)
 
 **Melhoria Principal:** Testabilidade (+0.5) e Arquitetura (+0.1)
 
