@@ -22,6 +22,7 @@
     "reindex:qdrant": "tsx scripts/reindex-with-embeddings.ts",
     "migrate:qdrant": "tsx scripts/migrate-to-qdrant.ts",
     "seed:assembleia": "tsx scripts/seed-assembleia.ts",
+    "seed:faq": "tsx scripts/seed-faq-rich.ts",
     "check:tables": "tsx scripts/check-assembleias-tables.ts",
     "check:storage": "tsx scripts/check-storage-bucket.ts",
     "check:all": "tsx scripts/check-assembleias-tables.ts && tsx scripts/check-storage-bucket.ts",
