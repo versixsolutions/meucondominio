@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/react'
+import { BrowserTracing } from '@sentry/tracing'
 
 /**
  * Initialize Sentry for error tracking and performance monitoring
@@ -13,6 +14,7 @@ import * as Sentry from '@sentry/react'
  * Features:
  * - Error tracking with full stack traces
  * - Performance monitoring (LCP, FCP, CLS)
+ * - Session replay on errors
  * - User feedback collection
  * - Release tracking
  * - Source maps (automatic from Vercel)
@@ -36,12 +38,33 @@ export function initializeSentry(): void {
       dsn: sentryDsn,
       environment,
       
-      // Set sample rate for performance monitoring (10% in production)
-      tracesSampleRate: import.meta.env.PROD ? 0.1 : 1.0,
+      // ✅ INTEGRATIONS (Browser Tracing + Replay)
+      integrations: [
+        new BrowserTracing({
+          // Trace propagation targets (APIs que queremos monitorar)
+          tracePropagationTargets: [
+            'localhost',
+            /^https:\/\/versixnorma\.com\.br/,
+            /^https:\/\/.*\.supabase\.co/,
+            /^https:\/\/.*\.qdrant\.io/
+          ],
+        }),
+        new Sentry.Replay({
+          // Mascarar textos sensíveis
+          maskAllText: true,
+          blockAllMedia: true,
+        }),
+      ],
+      
+      // ✅ PERFORMANCE MONITORING
+      // Set sample rate for performance monitoring (20% in production)
+      tracesSampleRate: import.meta.env.PROD ? 0.2 : 1.0,
 
-      // Capture session replays for 10% of errors in production
-      replaysOnErrorSampleRate: import.meta.env.PROD ? 0.1 : 1.0,
-      replaysSessionSampleRate: import.meta.env.PROD ? 0.05 : 0.1,
+      // ✅ SESSION REPLAY
+      // Capture 10% of sessions for replay
+      replaysSessionSampleRate: import.meta.env.PROD ? 0.1 : 0.2,
+      // Capture 100% of sessions with errors
+      replaysOnErrorSampleRate: 1.0,
 
       // Release tracking (optional - set via Vercel env or manually)
       release: import.meta.env.VITE_APP_VERSION || 'unknown',
@@ -84,8 +107,29 @@ export function initializeSentry(): void {
           }
         }
 
+        // Remove sensitive data from requests
+        if (event.request?.data) {
+          try {
+            const data = JSON.parse(event.request.data as string)
+            delete data.password
+            delete data.token
+            delete data.api_key
+            event.request.data = JSON.stringify(data)
+          } catch (e) {
+            // Ignore parse errors
+          }
+        }
+
         return event
       },
+
+      // ✅ INITIAL SCOPE - Tags padrão
+      initialScope: {
+        tags: {
+          app: 'versix-norma',
+          platform: 'web'
+        }
+      }
     })
 
     // Set user context if authenticated
@@ -103,21 +147,22 @@ export function initializeSentry(): void {
       }
     }
 
-    console.log(`✅ Sentry initialized (${environment})`)
+    console.log(`✅ Sentry initialized (${environment}) with Tracing + Replay`)
   } catch (err) {
     console.warn('⚠️ Sentry initialization failed:', err)
   }
 }
 
 /**
- * Capture a custom error event
- * Usage: captureError('My error', { extra: 'data' })
+ * Capture a custom error event with context
+ * Usage: captureError(new Error('My error'), { extra: 'data' })
  */
-export function captureError(message: string, context?: Record<string, any>): void {
-  Sentry.captureException(new Error(message), {
-    contexts: {
-      custom: context,
-    },
+export function captureError(error: Error, context?: Record<string, any>): void {
+  Sentry.withScope((scope) => {
+    if (context) {
+      scope.setContext('custom', context)
+    }
+    Sentry.captureException(error)
   })
 }
 
@@ -135,6 +180,29 @@ export function captureMessage(message: string, level: Sentry.SeverityLevel = 'i
  */
 export function setTag(key: string, value: string | number): void {
   Sentry.setTag(key, value)
+}
+
+/**
+ * Set user context (should be called after login)
+ * Usage: setUserContext({ id: '123', email: 'user@example.com', role: 'admin' })
+ */
+export function setUserContext(user: { id: string; email: string; role?: string }): void {
+  Sentry.setUser({
+    id: user.id,
+    email: user.email,
+    username: user.email.split('@')[0],
+    ...(user.role && { role: user.role })
+  })
+}
+
+/**
+ * Track a performance transaction
+ * Usage: const transaction = trackTransaction('page-load', 'navigation')
+ *        // ... do work ...
+ *        transaction.finish()
+ */
+export function trackTransaction(name: string, op: string) {
+  return Sentry.startTransaction({ name, op })
 }
 
 export default Sentry

@@ -47,6 +47,8 @@ async function reindex() {
   console.log('📥 Buscando documentos existentes do Qdrant...')
 
   const scrollResp = await fetch(
+    `${QDRANT_URL}/collections/${COLLECTION_NAME}/points/scroll`,
+    {
       method: 'POST',
       headers: {
         'api-key': QDRANT_API_KEY,
