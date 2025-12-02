@@ -586,14 +586,14 @@ serve(async (req) => {
   2. Se a informação NÃO estiver no contexto, diga: "Não encontrei essa informação nos documentos disponíveis"
   3. Seja concisa e objetiva (máximo 150 palavras)
   4. Use bullets quando listar múltiplos itens
-  5. Cite a fonte quando possível (ex: "Segundo a FAQ..." ou "Conforme o Regimento Interno...")
+  5. NÃO cite a fonte na resposta (ex: não diga "Segundo a FAQ..." ou "De acordo com...")
   6. Fale em português do Brasil, de forma profissional mas acessível
-  7. Use a FAQ como fonte primária; complemente com trechos do Regimento quando houver.
+  7. Responda diretamente a pergunta de forma clara e objetiva
 
 **CONTEXTO:**
 ${contextText}
 
-**IMPORTANTE:** Não invente informações. Se não souber, admita.`;
+**IMPORTANTE:** Não invente informações. Se não souber, admita. Não mencione a fonte (FAQ/Regimento) na resposta, pois ela será adicionada automaticamente pelo sistema.`;
 
     console.log("🤖 Chamando Groq...");
 
@@ -640,16 +640,22 @@ ${contextText}
 
     // Sanitize UTF-8 in response and sources
     const sanitizedAnswer = sanitizeUTF8(finalAnswer);
-    const sanitizedSources = allResults.map((r: any) => ({
-      title: sanitizeUTF8(r.payload.title || ""),
-      type: r.type,
-      relevance_score: r.relevance_score,
-      article_reference: r.payload.article_reference
-        ? sanitizeUTF8(r.payload.article_reference)
-        : undefined,
-      excerpt:
-        sanitizeUTF8((r.payload.content || "").substring(0, 150)) + "...",
-    }));
+    const sanitizedSources = allResults.map((r: any) => {
+      const source = {
+        title: sanitizeUTF8(r.payload.title || ""),
+        type: r.type,
+        relevance_score: r.relevance_score,
+        article_reference: r.payload.article_reference
+          ? sanitizeUTF8(r.payload.article_reference)
+          : undefined,
+        excerpt:
+          sanitizeUTF8((r.payload.content || "").substring(0, 150)) + "...",
+      };
+      console.log(
+        `📚 Fonte: ${source.title} | Ref: ${source.article_reference || "N/A"} | Type: ${source.type}`,
+      );
+      return source;
+    });
 
     return new Response(
       JSON.stringify({
