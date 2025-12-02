@@ -1,257 +1,308 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
-import { useAuth } from '../contexts/AuthContext'
-import { sanitizeHTML } from '../lib/sanitize'
-import { logger } from '../lib/logger'
+import { useState, useEffect, useRef, useCallback } from "react";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "../contexts/AuthContext";
+import { sanitizeHTML } from "../lib/sanitize";
+import { logger } from "../lib/logger";
 
 export interface ChatOption {
-  label: string
-  value: string
-  type: 'category' | 'question' | 'action'
+  label: string;
+  value: string;
+  type: "category" | "question" | "action";
 }
 
 export interface ChatMessage {
-  id: string
-  text: string
-  sender: 'user' | 'bot'
-  timestamp: Date
-  isError?: boolean
-  options?: ChatOption[]
+  id: string;
+  text: string;
+  sender: "user" | "bot";
+  timestamp: Date;
+  isError?: boolean;
+  options?: ChatOption[];
 }
 
 interface UseChatbotParams {
-  isOpen: boolean
+  isOpen: boolean;
 }
 
 interface UseChatbotReturn {
-  messages: ChatMessage[]
-  inputText: string
-  setInputText: (v: string) => void
-  isTyping: boolean
-  messagesEndRef: React.RefObject<HTMLDivElement>
-  handleSendMessage: (e: React.FormEvent | null, override?: string) => Promise<void>
-  handleOptionClick: (opt: ChatOption) => void
-  createTicketFromChat: () => Promise<void>
+  messages: ChatMessage[];
+  inputText: string;
+  setInputText: (v: string) => void;
+  isTyping: boolean;
+  messagesEndRef: React.RefObject<HTMLDivElement>;
+  handleSendMessage: (
+    e: React.FormEvent | null,
+    override?: string,
+  ) => Promise<void>;
+  handleOptionClick: (opt: ChatOption) => void;
+  createTicketFromChat: () => Promise<void>;
 }
 
 export function useChatbot({ isOpen }: UseChatbotParams): UseChatbotReturn {
-  const { profile, user } = useAuth()
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [inputText, setInputText] = useState('')
-  const [isTyping, setIsTyping] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const initialized = useRef(false)
-  const [lastQuestion, setLastQuestion] = useState('')
+  const { profile, user } = useAuth();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputText, setInputText] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const initialized = useRef(false);
+  const [lastQuestion, setLastQuestion] = useState("");
 
   // Scroll automático quando novas mensagens chegam
   useEffect(() => {
-    if (isOpen) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, isOpen])
+    if (isOpen) messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isOpen]);
 
   // Mensagem inicial
   useEffect(() => {
     if (isOpen && !initialized.current) {
-      const hour = new Date().getHours()
-      let greeting = 'Bom dia'
-      if (hour >= 12) greeting = 'Boa tarde'
-      if (hour >= 18) greeting = 'Boa noite'
-      const name = profile?.full_name?.split(' ')[0] || 'Morador'
+      const hour = new Date().getHours();
+      let greeting = "Bom dia";
+      if (hour >= 12) greeting = "Boa tarde";
+      if (hour >= 18) greeting = "Boa noite";
+      const name = profile?.full_name?.split(" ")[0] || "Morador";
       setMessages([
         {
-          id: '1',
+          id: "1",
           text: `${greeting}, ${name}! Sou a **Norma**, sua assistente virtual. 🤖\n\nJá estudei o regimento e as regras do condomínio. Como posso ajudar hoje?`,
-          sender: 'bot',
+          sender: "bot",
           timestamp: new Date(),
         },
-      ])
-      initialized.current = true
+      ]);
+      initialized.current = true;
     }
-  }, [isOpen, profile])
+  }, [isOpen, profile]);
 
   const createTicketFromChat = useCallback(async () => {
-    if (!user || !lastQuestion) return
-    setIsTyping(true)
+    if (!user || !lastQuestion) return;
+    setIsTyping(true);
     try {
-      const { error } = await supabase.from('chamados').insert({
+      const { error } = await supabase.from("chamados").insert({
         user_id: user.id,
         condominio_id: profile?.condominio_id,
-        subject: 'Dúvida via Chatbot (Norma)',
+        subject: "Dúvida via Chatbot (Norma)",
         description: lastQuestion,
-        status: 'aberto',
-      })
-      if (error) throw error
+        status: "aberto",
+      });
+      if (error) throw error;
       setTimeout(() => {
         setMessages((prev) => [
           ...prev,
           {
             id: Date.now().toString(),
             text: `✅ **Chamado Aberto!**\n\nEnviei sua dúvida para o síndico. Você será notificado quando houver resposta.`,
-            sender: 'bot',
+            sender: "bot",
             timestamp: new Date(),
           },
-        ])
-        setIsTyping(false)
-      }, 1000)
+        ]);
+        setIsTyping(false);
+      }, 1000);
     } catch (err) {
-      logger.error('Erro ao criar chamado via chatbot', err)
+      logger.error("Erro ao criar chamado via chatbot", err);
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now().toString(),
-          text: 'Erro ao criar chamado. Tente novamente.',
-          sender: 'bot',
+          text: "Erro ao criar chamado. Tente novamente.",
+          sender: "bot",
           timestamp: new Date(),
           isError: true,
         },
-      ])
-      setIsTyping(false)
+      ]);
+      setIsTyping(false);
     }
-  }, [user, lastQuestion, profile?.condominio_id])
+  }, [user, lastQuestion, profile?.condominio_id]);
 
   const handleOptionClick = useCallback(
     (option: ChatOption) => {
-      if (option.type === 'action') {
-        if (option.value === 'chamado') createTicketFromChat()
+      if (option.type === "action") {
+        if (option.value === "chamado") createTicketFromChat();
         // Navegação externa ou suporte será tratada no componente pai que conhece navigate/onClose
-        return
+        return;
       }
-      handleSendMessage(null, option.label)
+      handleSendMessage(null, option.label);
     },
-    [createTicketFromChat]
-  )
+    [createTicketFromChat],
+  );
 
   const handleSendMessage = useCallback(
     async (e: React.FormEvent | null, textOverride?: string) => {
-      if (e) e.preventDefault()
-      const textToSend = (textOverride || inputText).trim()
+      if (e) e.preventDefault();
+      const textToSend = (textOverride || inputText).trim();
 
       if (!textToSend) {
         setMessages((prev) => [
           ...prev,
           {
             id: Date.now().toString(),
-            text: '⚠️ Por favor, digite uma pergunta antes de enviar.',
-            sender: 'bot',
+            text: "⚠️ Por favor, digite uma pergunta antes de enviar.",
+            sender: "bot",
             timestamp: new Date(),
             isError: true,
           },
-        ])
-        return
+        ]);
+        return;
       }
       if (textToSend.length > 500) {
         setMessages((prev) => [
           ...prev,
           {
             id: Date.now().toString(),
-            text: '⚠️ Sua pergunta é muito longa. Máximo 500 caracteres.',
-            sender: 'bot',
+            text: "⚠️ Sua pergunta é muito longa. Máximo 500 caracteres.",
+            sender: "bot",
             timestamp: new Date(),
             isError: true,
           },
-        ])
-        return
+        ]);
+        return;
       }
       if (!profile?.condominio_id) {
         setMessages((prev) => [
           ...prev,
           {
             id: Date.now().toString(),
-            text: '❌ Seu perfil não está vinculado a um condomínio. Entre em contato com o suporte.',
-            sender: 'bot',
+            text: "❌ Seu perfil não está vinculado a um condomínio. Entre em contato com o suporte.",
+            sender: "bot",
             timestamp: new Date(),
             isError: true,
             options: [
-              { label: '📞 Ver Suporte', value: 'suporte', type: 'action' },
+              { label: "📞 Ver Suporte", value: "suporte", type: "action" },
             ],
           },
-        ])
-        return
+        ]);
+        return;
       }
 
-      const name = profile?.full_name?.split(' ')[0] || 'Morador'
-      setLastQuestion(textToSend)
+      const name = profile?.full_name?.split(" ")[0] || "Morador";
+      setLastQuestion(textToSend);
       setMessages((prev) => [
         ...prev,
-        { id: Date.now().toString(), text: textToSend, sender: 'user', timestamp: new Date() },
-      ])
-      setInputText('')
-      setIsTyping(true)
+        {
+          id: Date.now().toString(),
+          text: textToSend,
+          sender: "user",
+          timestamp: new Date(),
+        },
+      ]);
+      setInputText("");
+      setIsTyping(true);
 
       try {
-        logger.debug('Enviando para ask-ai', {
+        logger.debug("Enviando para ask-ai", {
           query: textToSend,
           userName: name,
           filter_condominio_id: profile.condominio_id,
-        })
+        });
 
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.access_token) throw new Error('Não autorizado: faça login novamente')
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session?.access_token)
+          throw new Error("Não autorizado: faça login novamente");
 
-        const { data, error } = await supabase.functions.invoke('ask-ai', {
+        const { data, error } = await supabase.functions.invoke("ask-ai", {
           body: {
             query: textToSend,
             userName: name,
             filter_condominio_id: profile.condominio_id,
           },
           headers: { Authorization: `Bearer ${session.access_token}` },
-        })
+        });
 
-        logger.debug('Resposta ask-ai', { data, error })
-        if (error) throw error
-        if (!data) throw new Error('Resposta vazia da API')
+        logger.debug("Resposta ask-ai", { data, error });
+        if (error) throw error;
+        if (!data) throw new Error("Resposta vazia da API");
 
-        const botResponse = sanitizeHTML(data.answer || 'Desculpe, não consegui processar sua pergunta no momento.')
-        const notFoundKeywords = ['não encontrei', 'não consta', 'não localizei', 'desculpe', 'não há', 'sem informação']
-        const seemsNotFound = notFoundKeywords.some((kw) => botResponse.toLowerCase().includes(kw))
+        const botResponseBase = sanitizeHTML(
+          data.answer ||
+            "Desculpe, não consegui processar sua pergunta no momento.",
+        );
+        // Acrescenta referências de fontes (FAQ/Documento) ao final da resposta
+        let botResponse = botResponseBase;
+        if (
+          Array.isArray((data as any).sources) &&
+          (data as any).sources.length > 0
+        ) {
+          const sources = (data as any).sources as Array<{
+            title?: string;
+            type?: string;
+          }>;
+          // Prioriza mostrar a primeira FAQ; se não houver, mostra o primeiro Documento
+          const faqSource = sources.find(
+            (s) => (s.type || "").toLowerCase() === "faq",
+          );
+          const docSource = sources.find(
+            (s) => (s.type || "").toLowerCase() === "document",
+          );
+          const chosen = faqSource || docSource;
+          if (chosen?.title) {
+            botResponse = `${botResponseBase}\n\nFonte: ${sanitizeHTML(chosen.title)}`;
+          }
+        }
+        const notFoundKeywords = [
+          "não encontrei",
+          "não consta",
+          "não localizei",
+          "desculpe",
+          "não há",
+          "sem informação",
+        ];
+        const seemsNotFound = notFoundKeywords.some((kw) =>
+          botResponse.toLowerCase().includes(kw),
+        );
 
         const options: ChatOption[] | undefined = seemsNotFound
           ? [
-              { label: '🎫 Abrir Chamado', value: 'chamado', type: 'action' },
-              { label: '📞 Ver Contatos', value: 'suporte', type: 'action' },
+              { label: "🎫 Abrir Chamado", value: "chamado", type: "action" },
+              { label: "📞 Ver Contatos", value: "suporte", type: "action" },
             ]
-          : undefined
+          : undefined;
 
         setMessages((prev) => [
           ...prev,
           {
             id: (Date.now() + 1).toString(),
             text: botResponse,
-            sender: 'bot',
+            sender: "bot",
             timestamp: new Date(),
             options,
           },
-        ])
+        ]);
       } catch (err: any) {
-        logger.error('Erro ao enviar mensagem para chatbot', err, {
+        logger.error("Erro ao enviar mensagem para chatbot", err, {
           userId: user?.id,
           condominioId: profile?.condominio_id,
-        })
-        let errorMessage = 'Estou com dificuldade de conexão no momento. '
-        if (err.message?.includes('condominio_id')) errorMessage = 'Seu perfil não está vinculado a um condomínio. Entre em contato com o suporte.'
-        else if (err.message?.includes('Query')) errorMessage = 'Sua pergunta é inválida. Por favor, tente novamente com outras palavras.'
-        else if (err.message?.includes('500')) errorMessage = 'Erro no servidor. Nossa equipe foi notificada. Tente novamente em instantes.'
-        else if (err.message) errorMessage = `Erro: ${err.message}`
+        });
+        let errorMessage = "Estou com dificuldade de conexão no momento. ";
+        if (err.message?.includes("condominio_id"))
+          errorMessage =
+            "Seu perfil não está vinculado a um condomínio. Entre em contato com o suporte.";
+        else if (err.message?.includes("Query"))
+          errorMessage =
+            "Sua pergunta é inválida. Por favor, tente novamente com outras palavras.";
+        else if (err.message?.includes("500"))
+          errorMessage =
+            "Erro no servidor. Nossa equipe foi notificada. Tente novamente em instantes.";
+        else if (err.message) errorMessage = `Erro: ${err.message}`;
 
         setMessages((prev) => [
           ...prev,
           {
             id: Date.now().toString(),
             text: errorMessage,
-            sender: 'bot',
+            sender: "bot",
             timestamp: new Date(),
             isError: true,
             options: [
-              { label: '🎫 Abrir Chamado', value: 'chamado', type: 'action' },
-              { label: '📞 Ver Suporte', value: 'suporte', type: 'action' },
+              { label: "🎫 Abrir Chamado", value: "chamado", type: "action" },
+              { label: "📞 Ver Suporte", value: "suporte", type: "action" },
             ],
           },
-        ])
+        ]);
       } finally {
-        setIsTyping(false)
+        setIsTyping(false);
       }
     },
-    [inputText, profile, user]
-  )
+    [inputText, profile, user],
+  );
 
   return {
     messages,
@@ -262,5 +313,5 @@ export function useChatbot({ isOpen }: UseChatbotParams): UseChatbotReturn {
     handleSendMessage,
     handleOptionClick,
     createTicketFromChat,
-  }
+  };
 }
