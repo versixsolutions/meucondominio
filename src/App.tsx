@@ -71,6 +71,10 @@ const FinanceiroImport = lazy(() => import("./pages/admin/FinanceiroImport"));
 const AdminAssembleias = lazy(() => import("./pages/admin/AdminAssembleias"));
 const AdminIA = lazy(() => import("./pages/admin/AdminIA"));
 
+// --- PAGES SÍNDICO ---
+const FAQManagement = lazy(() => import("./pages/sindico/FAQManagement"));
+const DocumentUpload = lazy(() => import("./pages/sindico/DocumentUpload"));
+
 // --- COMPONENTES DE PROTEÇÃO DE ROTA ---
 
 function PrivateRoute({
@@ -262,6 +266,19 @@ function AppRoutes() {
                 <Route path="ia-dashboard" element={<AdminIA />} />
                 <Route path="marketplace" element={<MarketplaceManagement />} />
                 <Route path="faq-import" element={<FAQImport />} />
+              </Route>
+
+              {/* Rotas do Síndico */}
+              <Route
+                path="/sindico"
+                element={
+                  <PrivateRoute>
+                    <Layout />
+                  </PrivateRoute>
+                }
+              >
+                <Route path="faqs" element={<FAQManagement />} />
+                <Route path="documentos" element={<DocumentUpload />} />
               </Route>
 
               <Route path="*" element={<Navigate to="/" replace />} />

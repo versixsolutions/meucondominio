@@ -30,6 +30,36 @@ function getCorsHeaders(origin?: string): Record<string, string> {
   };
 }
 
+// ✅ SANITIZA UTF-8 MAL CODIFICADO
+function sanitizeUTF8(text: string): string {
+  if (!text) return text;
+  return text
+    .replace(/Ã¡/g, "á")
+    .replace(/Ã©/g, "é")
+    .replace(/Ã­/g, "í")
+    .replace(/Ã³/g, "ó")
+    .replace(/Ãº/g, "ú")
+    .replace(/Ã£/g, "ã")
+    .replace(/Ãµ/g, "õ")
+    .replace(/Ã§/g, "ç")
+    .replace(/Ã /g, "à")
+    .replace(/Ãª/g, "ê")
+    .replace(/Ã´/g, "ô")
+    .replace(/Ã/g, "Á")
+    .replace(/Ã‰/g, "É")
+    .replace(/Ã/g, "Í")
+    .replace(/Ã"/g, "Ó")
+    .replace(/Ãš/g, "Ú")
+    .replace(/Ãƒ/g, "Ã")
+    .replace(/Ã•/g, "Õ")
+    .replace(/Ã‡/g, "Ç")
+    .replace(/Ã‚/g, "Â")
+    .replace(/ÃŠ/g, "Ê")
+    .replace(/Ã"/g, "Ô")
+    .replace(/Âº/g, "º")
+    .replace(/Âª/g, "ª");
+}
+
 serve(async (req) => {
   const origin = req.headers.get("origin") || undefined;
   const corsHeaders = getCorsHeaders(origin);
@@ -187,6 +217,11 @@ serve(async (req) => {
           ...r,
           type: "document",
           relevance_score: r.score,
+          payload: {
+            ...r.payload,
+            title: sanitizeUTF8(r.payload?.title || ""),
+            content: sanitizeUTF8(r.payload?.content || ""),
+          },
         }));
         console.log(
           `📄 ${documentResults.length} documentos encontrados via busca vetorial`,
@@ -241,12 +276,19 @@ serve(async (req) => {
         const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         const { data: faqData, error: faqError } = await supabase
           .from("faqs")
-          .select("id, question, answer, created_at")
+          .select("id, question, answer, created_at, condominio_id")
+          .eq("condominio_id", filter_condominio_id)
           .order("created_at", { ascending: false });
 
         if (!faqError && faqData) {
-          faqs = faqData as any[];
-          console.log(`✅ Total de FAQs encontradas: ${faqs.length}`);
+          faqs = (faqData as any[]).map((faq) => ({
+            ...faq,
+            question: sanitizeUTF8(faq.question || ""),
+            answer: sanitizeUTF8(faq.answer || ""),
+          }));
+          console.log(
+            `✅ FAQs encontradas para condomínio ${filter_condominio_id}: ${faqs.length}`,
+          );
         } else {
           console.warn("⚠️ Erro ao buscar FAQs:", faqError?.message);
         }
@@ -299,7 +341,16 @@ serve(async (req) => {
           if (content.includes(normalizedQuery)) score += 8;
           if (title.includes(normalizedQuery)) score += 12;
 
-          return { ...point, type: "document", relevance_score: score / 10 };
+          return {
+            ...point,
+            type: "document",
+            relevance_score: score / 10,
+            payload: {
+              ...point.payload,
+              title: sanitizeUTF8(point.payload.title || ""),
+              content: sanitizeUTF8(point.payload.content || ""),
+            },
+          };
         })
         .filter((r: any) => r.relevance_score > 0)
         .sort((a: any, b: any) => b.relevance_score - a.relevance_score)
@@ -312,31 +363,132 @@ serve(async (req) => {
 
     if (faqs.length) {
       if (hasRealEmbedding) {
-        // IA: usar embeddings também para FAQs
-        const faqsWithScores = await Promise.all(
-          faqs.slice(0, 20).map(async (faq: any) => {
-            const { embedding: faqEmb } = await generateEmbedding(faq.question);
-
-            const dotProduct = queryEmbedding.reduce(
-              (sum, val, i) => sum + val * (faqEmb[i] ?? 0),
-              0,
+        // Try cache: fetch embeddings from faqs_vectors
+        let vectorRows: any[] = [];
+        try {
+          if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+            const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            const { data: vecData } = await supabase
+              .from("faqs_vectors")
+              .select("faq_id, embedding")
+              .in(
+                "faq_id",
+                faqs.slice(0, 50).map((f: any) => f.id),
+              );
+            vectorRows = vecData || [];
+            console.log(
+              `🗂️ Cache FAQ vectors: ${vectorRows.length}/${Math.min(50, faqs.length)} hits`,
             );
-
-            const similarity = dotProduct;
-
-            return {
-              ...faq,
-              type: "faq",
-              relevance_score: similarity,
-              payload: { title: faq.question, content: faq.answer },
-            };
+          }
+        } catch (_) {
+          /* ignore cache errors */
+        }
+        // IA: usar embeddings também para FAQs
+        // Para evitar custo elevado, compare com a própria pergunta em keyword também
+        const faqsWithScores = await Promise.all(
+          faqs.slice(0, 50).map(async (faq: any) => {
+            // Use cached embedding if available
+            const cached = vectorRows.find((r: any) => r.faq_id === faq.id);
+            try {
+              const faqEmb: number[] = cached
+                ? cached.embedding
+                : (await generateEmbedding(faq.question)).embedding;
+              const dotProduct = queryEmbedding.reduce(
+                (sum, val, i) => sum + val * (faqEmb[i] ?? 0),
+                0,
+              );
+              const similarity = dotProduct;
+              return {
+                ...faq,
+                type: "faq",
+                relevance_score: similarity,
+                payload: { title: faq.question, content: faq.answer },
+              };
+            } catch (_) {
+              const q = faq.question.toLowerCase();
+              let score = 0;
+              queryWords.forEach((w: string) => {
+                if (q.includes(w)) score += 1;
+              });
+              return {
+                ...faq,
+                type: "faq",
+                relevance_score: score / 10,
+                payload: { title: faq.question, content: faq.answer },
+              };
+            }
           }),
         );
 
         faqResults = faqsWithScores
-          .filter((f) => f.relevance_score > 0.4)
+          .filter((f) => f.relevance_score > 0.15)
           .sort((a, b) => b.relevance_score - a.relevance_score)
           .slice(0, 3);
+
+        // Log diagnóstico: mostrar top 5 scores mesmo se não passar threshold
+        const top5Scores = faqsWithScores
+          .sort((a, b) => b.relevance_score - a.relevance_score)
+          .slice(0, 5)
+          .map(
+            (f) =>
+              `${f.relevance_score.toFixed(4)} ("${f.payload.title.substring(0, 40)}...")`,
+          );
+        console.log(`📊 Top 5 FAQ scores: ${top5Scores.join(" | ")}`);
+
+        if (faqResults.length) {
+          console.log(`✅ ${faqResults.length} FAQ(s) acima do threshold 0.15`);
+        } else {
+          console.log(
+            "ℹ️ Nenhuma FAQ acima do threshold 0.15 — aplicando fallback por texto exato",
+          );
+          const nq = query
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/\p{Diacritic}/gu, "");
+
+          console.log(`🔍 Query normalizada para fallback: "${nq}"`);
+          console.log(`🔍 Total de FAQs para avaliar: ${faqs.length}`);
+
+          const keywordExact = faqs
+            .map((faq: any) => {
+              const q = String(faq.question || "")
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/\p{Diacritic}/gu, "");
+              const nqWords = nq.split(/\s+/).filter((w) => w.length > 2);
+              let score = 0;
+
+              // Match exato da query completa = prioridade máxima
+              if (q.includes(nq)) score = 10;
+
+              // Ou se a FAQ contém >= 70% das palavras-chave
+              const matchedWords = nqWords.filter((w) => q.includes(w));
+              if (matchedWords.length >= Math.ceil(nqWords.length * 0.7)) {
+                score = 5 + matchedWords.length * 0.5;
+              }
+
+              return {
+                ...faq,
+                type: "faq",
+                relevance_score: score / 10,
+                payload: { title: faq.question, content: faq.answer },
+              };
+            })
+            .filter((f) => f.relevance_score >= 0.5)
+            .sort((a, b) => b.relevance_score - a.relevance_score)
+            .slice(0, 3);
+
+          if (keywordExact.length) {
+            faqResults = keywordExact;
+            console.log(
+              `✅ Fallback incluiu ${faqResults.length} FAQ(s) por correspondência textual (top score: ${faqResults[0].relevance_score.toFixed(2)})`,
+            );
+          } else {
+            console.log(
+              `❌ Fallback textual não encontrou FAQs (normalizedQuery: "${nq}")`,
+            );
+          }
+        }
       } else {
         // Fallback: ranking keyword
         const normalizedQuery = query.toLowerCase();
@@ -369,7 +521,8 @@ serve(async (req) => {
       }
     }
 
-    const allResults = [...documentResults, ...faqResults]
+    // Priorizar FAQs: primeiro FAQs, depois documentos
+    const allResults = [...faqResults, ...documentResults]
       .sort((a, b) => b.relevance_score - a.relevance_score)
       .slice(0, 4);
 
@@ -413,13 +566,13 @@ serve(async (req) => {
     const systemPrompt = `Você é a Norma, assistente virtual de gestão condominial.
 
 **INSTRUÇÕES CRÍTICAS:**
-1. Responda APENAS com base no CONTEXTO fornecido abaixo
-2. Se a informação NÃO estiver no contexto, diga: "Não encontrei essa informação nos documentos disponíveis"
-3. Seja concisa e objetiva (máximo 150 palavras)
-4. Use bullets quando listar múltiplos itens
-5. Cite a fonte quando possível (ex: "Segundo o Regimento Interno..." ou "Conforme a FAQ...")
-6. Fale em português do Brasil, de forma profissional mas acessível
-7. Priorize informações de FAQs quando forem mais claras e objetivas
+  1. Responda APENAS com base no CONTEXTO fornecido abaixo
+  2. Se a informação NÃO estiver no contexto, diga: "Não encontrei essa informação nos documentos disponíveis"
+  3. Seja concisa e objetiva (máximo 150 palavras)
+  4. Use bullets quando listar múltiplos itens
+  5. Cite a fonte quando possível (ex: "Segundo a FAQ..." ou "Conforme o Regimento Interno...")
+  6. Fale em português do Brasil, de forma profissional mas acessível
+  7. Use a FAQ como fonte primária; complemente com trechos do Regimento quando houver.
 
 **CONTEXTO:**
 ${contextText}
@@ -469,16 +622,21 @@ ${contextText}
 
     console.log(`✅ Resposta gerada (${finalAnswer.length} caracteres)`);
 
+    // Sanitize UTF-8 in response and sources
+    const sanitizedAnswer = sanitizeUTF8(finalAnswer);
+    const sanitizedSources = allResults.map((r: any) => ({
+      title: sanitizeUTF8(r.payload.title || ""),
+      type: r.type,
+      relevance_score: r.relevance_score,
+      excerpt:
+        sanitizeUTF8((r.payload.content || "").substring(0, 150)) + "...",
+    }));
+
     return new Response(
       JSON.stringify({
-        answer: finalAnswer,
+        answer: sanitizedAnswer,
         search_type: searchType,
-        sources: allResults.map((r: any) => ({
-          title: r.payload.title,
-          type: r.type,
-          relevance_score: r.relevance_score,
-          excerpt: r.payload.content.substring(0, 150) + "...",
-        })),
+        sources: sanitizedSources,
       }),
       { headers: corsHeaders },
     );

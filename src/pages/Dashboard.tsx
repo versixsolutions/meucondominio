@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useDashboardStats } from "../hooks/useDashboardStats";
 import { formatCurrency } from "../lib/utils";
@@ -37,7 +37,7 @@ interface BannerAd {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { profile, isAdmin } = useAuth();
+  const { profile, isAdmin, isSindico, isSubSindico } = useAuth();
   const { stats } = useDashboardStats();
 
   const [updates, setUpdates] = useState<DashboardUpdate[]>([]);
@@ -380,6 +380,50 @@ export default function Dashboard() {
           onClick={() => navigate("/biblioteca")}
         />
       </div>
+
+      {/* AÇÕES RÁPIDAS DO SÍNDICO */}
+      {(isSindico || isSubSindico) && (
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl shadow-sm border-2 border-blue-200 p-6 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            ⚡ Ações Rápidas do Síndico
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Link
+              to="/sindico/faqs"
+              className="flex items-center gap-4 p-4 bg-white rounded-xl border-2 border-blue-200 hover:border-blue-400 hover:shadow-md transition-all group"
+            >
+              <div className="text-4xl group-hover:scale-110 transition-transform">
+                💬
+              </div>
+              <div>
+                <p className="font-bold text-gray-900 group-hover:text-blue-600 transition">
+                  Gerenciar FAQs
+                </p>
+                <p className="text-sm text-gray-600">
+                  Editar perguntas frequentes
+                </p>
+              </div>
+            </Link>
+
+            <Link
+              to="/sindico/documentos"
+              className="flex items-center gap-4 p-4 bg-white rounded-xl border-2 border-green-200 hover:border-green-400 hover:shadow-md transition-all group"
+            >
+              <div className="text-4xl group-hover:scale-110 transition-transform">
+                📚
+              </div>
+              <div>
+                <p className="font-bold text-gray-900 group-hover:text-green-600 transition">
+                  Upload Documentos
+                </p>
+                <p className="text-sm text-gray-600">
+                  Enriquecer base da Norma
+                </p>
+              </div>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* BANNER PUBLICITÁRIO COM CARROSSEL */}
       {banners.length > 0 && (
