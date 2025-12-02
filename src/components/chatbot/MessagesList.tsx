@@ -13,6 +13,7 @@ interface Message {
   timestamp: Date;
   isError?: boolean;
   options?: ChatOption[];
+  isWelcome?: boolean;
 }
 
 interface MessagesListProps {
@@ -71,7 +72,7 @@ export function MessagesList({
           </div>
 
           {/* Controles de feedback para respostas da Norma */}
-          {msg.sender === "bot" && !msg.isError && (
+          {msg.sender === "bot" && !msg.isError && !msg.isWelcome && (
             <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
               <span className="text-gray-400">Esta resposta foi útil?</span>
               <button

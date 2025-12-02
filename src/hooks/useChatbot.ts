@@ -18,6 +18,7 @@ export interface ChatMessage {
   timestamp: Date;
   isError?: boolean;
   options?: ChatOption[];
+  isWelcome?: boolean;
 }
 
 interface UseChatbotParams {
@@ -67,6 +68,7 @@ export function useChatbot({ isOpen }: UseChatbotParams): UseChatbotReturn {
           text: `${greeting}, ${name}! Sou a **Norma**, sua assistente virtual. 🤖\n\nJá estudei o regimento e as regras do condomínio. Como posso ajudar hoje?`,
           sender: "bot",
           timestamp: new Date(),
+          isWelcome: true,
         },
       ]);
       initialized.current = true;
