@@ -238,12 +238,21 @@ export function useChatbot({ isOpen }: UseChatbotParams): UseChatbotReturn {
             (s) => (s.type || "").toLowerCase() === "document",
           );
           const chosen = faqSource || docSource;
+
           if (chosen) {
-            // Para FAQs, usar article_reference se disponível; senão usar title
-            const sourceRef =
-              chosen.type === "faq" && chosen.article_reference
-                ? chosen.article_reference
-                : chosen.title;
+            let sourceRef = null;
+
+            // Para FAQs, APENAS usar article_reference (nunca o title que é a pergunta)
+            if (chosen.type === "faq") {
+              if (chosen.article_reference) {
+                sourceRef = chosen.article_reference;
+              }
+              // Se não tiver article_reference, não mostrar fonte para FAQ
+            } else {
+              // Para documentos, usar o title
+              sourceRef = chosen.title;
+            }
+
             if (sourceRef) {
               botResponse = `${botResponseBase}\n\nFonte: ${sanitizeHTML(sourceRef)}`;
             }
