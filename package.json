@@ -21,6 +21,7 @@
     "test:query": "tsx scripts/test-query-embedding.ts",
     "setup:qdrant": "tsx scripts/setup-qdrant.ts",
     "reindex:qdrant": "tsx scripts/migrate-to-qdrant.ts",
+    "reindex:faqs": "tsx scripts/reindex-300-faqs-qdrant.ts",
     "clear:qdrant": "tsx scripts/clear-qdrant.ts",
     "diagnose:upload": "tsx scripts/diagnose-upload.ts",
     "migrate:qdrant": "tsx scripts/migrate-to-qdrant.ts",
