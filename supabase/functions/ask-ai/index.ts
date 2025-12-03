@@ -56,31 +56,6 @@ async function fetchWithTimeout(
   }
 }
 
-// ✅ FUNÇÃO HELPER: FETCH COM TIMEOUT
-async function fetchWithTimeout(
-  url: string,
-  options: RequestInit,
-  timeoutMs: number,
-): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-    return response;
-  } catch (error) {
-    clearTimeout(timeoutId);
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new Error(`Timeout após ${timeoutMs}ms ao chamar ${url}`);
-    }
-    throw error;
-  }
-}
-
 // ✅ SANITIZA UTF-8 MAL CODIFICADO
 function sanitizeUTF8(text: string): string {
   if (!text) return text;
