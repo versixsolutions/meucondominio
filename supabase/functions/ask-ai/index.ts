@@ -678,11 +678,97 @@ serve(async (req) => {
       );
     }
 
+    // ===== VALIDAÇÃO EXTRA: COMPRIMENTO MÍNIMO DA QUERY =====
+    const cleanQuery = query.trim().toLowerCase();
+    if (cleanQuery.length < 3) {
+      console.log("⚠️ Query muito curta (< 3 caracteres) - rejeitando");
+      return new Response(
+        JSON.stringify({
+          answer:
+            "Por favor, forneça uma pergunta mais específica para que eu possa ajudar melhor.",
+          sources: [],
+          search_type: "invalid",
+        }),
+        { headers: corsHeaders },
+      );
+    }
+
+    // ===== VALIDAÇÃO EXTRA: OVERLAP DE PALAVRAS-CHAVE =====
+    // Extrair palavras significativas da query (ignorar stopwords)
+    const stopwords = new Set([
+      "o",
+      "a",
+      "os",
+      "as",
+      "de",
+      "da",
+      "do",
+      "das",
+      "dos",
+      "em",
+      "no",
+      "na",
+      "nos",
+      "nas",
+      "para",
+      "com",
+      "por",
+      "é",
+      "são",
+      "qual",
+      "quais",
+      "que",
+      "como",
+      "onde",
+      "quando",
+      "pode",
+      "podem",
+      "posso",
+      "ser",
+      "ter",
+      "tem",
+      "um",
+      "uma",
+      "uns",
+      "umas",
+      "e",
+      "ou",
+      "mas",
+      "se",
+    ]);
+    const queryWords = cleanQuery
+      .split(/\s+/)
+      .filter((w) => w.length > 2 && !stopwords.has(w));
+
     // Se não houver resultados relevantes acima de um limite mínimo, tratar como "não encontrei"
     // Thresholds aumentados para garantir precisão e evitar fontes aleatórias
     const topRelevant = allResults.filter((r) => {
       const min = r.type === "faq_ai" ? 0.4 : r.type === "faq" ? 0.35 : 0.45;
-      return (r.relevance_score ?? 0) >= min;
+      if ((r.relevance_score ?? 0) < min) return false;
+
+      // Validação adicional: verificar overlap de palavras-chave
+      // Para FAQs AI, ser mais flexível (50% das palavras)
+      // Para outros tipos, exigir pelo menos 1 palavra em comum
+      const contentLower = (
+        r.payload.title +
+        " " +
+        r.payload.content
+      ).toLowerCase();
+      const matchingWords = queryWords.filter((word) =>
+        contentLower.includes(word),
+      );
+
+      const minOverlap =
+        r.type === "faq_ai" ? Math.ceil(queryWords.length * 0.3) : 1;
+
+      if (matchingWords.length < minOverlap && queryWords.length > 0) {
+        console.log(
+          `⚠️ Resultado "${r.payload.title.substring(0, 40)}..." rejeitado: overlap insuficiente (${matchingWords.length}/${queryWords.length} palavras)`,
+        );
+        return false;
+      }
+
+      return true;
     });
 
     if (topRelevant.length === 0) {
@@ -791,6 +877,52 @@ ${contextText}
     }
 
     console.log(`✅ Resposta gerada (${finalAnswer.length} caracteres)`);
+
+    // ===== VALIDAÇÃO EXTRA: QUALIDADE DA RESPOSTA =====
+    // Verificar se a resposta do LLM não é genérica demais ou muito curta
+    const genericResponses = [
+      "não encontrei",
+      "não tenho informação",
+      "não sei",
+      "não consta",
+      "não há informação",
+      "não está disponível",
+      "não posso",
+    ];
+
+    const isGenericResponse = genericResponses.some((phrase) =>
+      finalAnswer.toLowerCase().includes(phrase),
+    );
+
+    // Se a resposta é genérica E temos poucos resultados relevantes, retornar sem fontes
+    if (isGenericResponse && topRelevant.length < 2) {
+      console.log(
+        "⚠️ Resposta genérica com poucos resultados - removendo fontes",
+      );
+      return new Response(
+        JSON.stringify({
+          answer: finalAnswer,
+          sources: [], // Não mostrar fontes para respostas genéricas
+          search_type: searchType,
+        }),
+        { headers: corsHeaders },
+      );
+    }
+
+    // Validar se resposta tem comprimento mínimo (evitar respostas vazias ou muito curtas)
+    if (finalAnswer.trim().length < 20) {
+      console.log("⚠️ Resposta muito curta - usando fallback");
+      finalAnswer =
+        "Não encontrei informações específicas sobre isso. Por favor, reformule a pergunta ou verifique se os documentos relevantes foram adicionados.";
+      return new Response(
+        JSON.stringify({
+          answer: finalAnswer,
+          sources: [],
+          search_type: searchType,
+        }),
+        { headers: corsHeaders },
+      );
+    }
 
     // Sanitize UTF-8 in response and sources
     const sanitizedAnswer = sanitizeUTF8(finalAnswer);
