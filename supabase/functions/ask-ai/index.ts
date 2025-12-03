@@ -269,8 +269,8 @@ serve(async (req) => {
       }
     }
 
-    // ===== BUSCA DE FAQs (AI) =====
-    console.log("❓ Buscando FAQs da base AI...");
+    // ===== BUSCA DE FAQs (AI + PÚBLICAS) =====
+    console.log("❓ Buscando FAQs (AI e públicas)...");
     let faqs: any[] = [];
 
     if (SUPABASE_URL && SUPABASE_ANON_KEY) {
@@ -295,6 +295,30 @@ serve(async (req) => {
           );
         } else {
           console.warn("⚠️ Erro ao buscar FAQs:", faqError?.message);
+        }
+
+        // Também buscar FAQs públicas da tabela faqs (do módulo FAQ)
+        const { data: publicFaqs, error: publicFaqsError } = await supabase
+          .from("faqs")
+          .select(
+            "id, question, answer, article_reference, condominio_id, created_at",
+          )
+          .eq("condominio_id", filter_condominio_id)
+          .order("created_at", { ascending: false });
+
+        if (!publicFaqsError && publicFaqs?.length) {
+          const normalized = (publicFaqs as any[]).map((faq) => ({
+            ...faq,
+            question: sanitizeUTF8(faq.question || ""),
+            answer: sanitizeUTF8(faq.answer || ""),
+          }));
+          faqs = [...normalized, ...faqs];
+          console.log(`✅ FAQs públicas adicionadas: ${normalized.length}`);
+        } else if (publicFaqsError) {
+          console.warn(
+            "⚠️ Erro ao buscar FAQs públicas:",
+            publicFaqsError.message,
+          );
         }
       } catch (err) {
         console.warn("⚠️ Erro ao conectar com FAQs:", err);
@@ -626,12 +650,18 @@ serve(async (req) => {
       );
     }
 
-    if (allResults.length === 0) {
+    // Se não houver resultados relevantes acima de um limite mínimo, tratar como "não encontrei"
+    const topRelevant = allResults.filter((r) => {
+      const min = r.type === "faq_ai" ? 0.25 : r.type === "faq" ? 0.2 : 0.3;
+      return (r.relevance_score ?? 0) >= min;
+    });
+
+    if (topRelevant.length === 0) {
       return new Response(
         JSON.stringify({
           answer:
             "Não encontrei informações sobre isso nos documentos ou FAQs do condomínio. Você pode reformular a pergunta ou verificar se os documentos relevantes foram adicionados na Biblioteca.",
-          sources: [],
+          sources: [], // Não retornar fontes aleatórias quando não há match relevante
           search_type: searchType,
         }),
         { headers: corsHeaders },
@@ -646,7 +676,7 @@ serve(async (req) => {
     }
 
     // ===== MONTAR CONTEXTO PARA GROQ =====
-    const contextParts = allResults.map((r: any, i: number) => {
+    const contextParts = topRelevant.map((r: any, i: number) => {
       const source = r.payload.title || "Documento";
       let type = "📄 Documento";
       if (r.type === "faq_ai") type = "⭐ FAQ AI";
@@ -722,7 +752,7 @@ ${contextText}
 
     // Sanitize UTF-8 in response and sources
     const sanitizedAnswer = sanitizeUTF8(finalAnswer);
-    const sanitizedSources = allResults.map((r: any) => {
+    const sanitizedSources = topRelevant.map((r: any) => {
       const source = {
         title: sanitizeUTF8(r.payload.title || ""),
         type: r.type,
