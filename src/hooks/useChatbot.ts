@@ -115,18 +115,6 @@ export function useChatbot({ isOpen }: UseChatbotParams): UseChatbotReturn {
     }
   }, [user, lastQuestion, profile?.condominio_id]);
 
-  const handleOptionClick = useCallback(
-    (option: ChatOption) => {
-      if (option.type === "action") {
-        if (option.value === "chamado") createTicketFromChat();
-        // Navegação externa ou suporte será tratada no componente pai que conhece navigate/onClose
-        return;
-      }
-      handleSendMessage(null, option.label);
-    },
-    [createTicketFromChat, handleSendMessage],
-  );
-
   const handleSendMessage = useCallback(
     async (e: React.FormEvent | null, textOverride?: string) => {
       if (e) e.preventDefault();
@@ -327,6 +315,18 @@ export function useChatbot({ isOpen }: UseChatbotParams): UseChatbotReturn {
       }
     },
     [inputText, profile, user],
+  );
+
+  const handleOptionClick = useCallback(
+    (option: ChatOption) => {
+      if (option.type === "action") {
+        if (option.value === "chamado") createTicketFromChat();
+        // Navegação externa ou suporte será tratada no componente pai que conhece navigate/onClose
+        return;
+      }
+      handleSendMessage(null, option.label);
+    },
+    [createTicketFromChat, handleSendMessage],
   );
 
   const lastBotAnswer = useRef<{
