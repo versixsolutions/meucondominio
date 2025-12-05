@@ -209,45 +209,77 @@ export default function FinancialDashboard() {
         </div>
       }
     >
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                Receitas
-              </p>
-              <h3 className="text-2xl font-bold text-green-600 mt-1">
-                {formatCurrency(summaryData.totalReceitas)}
-              </h3>
-            </div>
-            <div className="p-2 bg-green-50 rounded-lg text-green-600">
-              <ArrowUpCircle size={24} />
+      {/* Summary Cards - Redesigned */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {/* Saldo */}
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+          <div className="absolute top-0 right-0 -mt-2 -mr-2 text-indigo-50 opacity-50">
+            <Wallet size={80} strokeWidth={1.5} />
+          </div>
+          <div className="flex items-center justify-between pb-2 relative">
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">
+              Saldo Período
+            </h3>
+            <div className="bg-indigo-50 p-1.5 rounded-md text-indigo-600">
+              <Wallet className="h-4 w-4" />
             </div>
           </div>
-          <div className="text-xs text-gray-400">
-            Total arrecadado no período
+          <div className="relative">
+            <div
+              className={`text-3xl font-extrabold truncate tracking-tight ${
+                summaryData.saldo >= 0 ? "text-emerald-600" : "text-rose-600"
+              }`}
+            >
+              {formatCurrency(summaryData.saldo)}
+            </div>
+            <p className="text-xs font-medium text-slate-400 mt-1">
+              Receitas - Despesas
+            </p>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                Despesas
-              </p>
-              <h3 className="text-2xl font-bold text-red-600 mt-1">
-                {formatCurrency(summaryData.totalDespesas)}
-              </h3>
-            </div>
-            <div className="p-2 bg-red-50 rounded-lg text-red-600">
-              <ArrowDownCircle size={24} />
+        {/* Receitas */}
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+          <div className="flex items-center justify-between pb-2">
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">
+              Receita Total
+            </h3>
+            <div className="bg-emerald-50 p-1.5 rounded-md text-emerald-600">
+              <TrendingUp className="h-4 w-4" />
             </div>
           </div>
-          <div className="text-xs text-gray-400">Total gasto no período</div>
+          <div>
+            <div className="text-3xl font-extrabold truncate tracking-tight text-slate-900">
+              {formatCurrency(summaryData.totalReceitas)}
+            </div>
+            <p className="text-xs text-emerald-600 font-medium mt-1 flex items-center gap-1">
+              <ArrowUpCircle size={12} /> Entradas
+            </p>
+          </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        {/* Despesas */}
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+          <div className="flex items-center justify-between pb-2">
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">
+              Despesa Total
+            </h3>
+            <div className="bg-rose-50 p-1.5 rounded-md text-rose-600">
+              <TrendingDown className="h-4 w-4" />
+            </div>
+          </div>
+          <div>
+            <div className="text-3xl font-extrabold truncate tracking-tight text-slate-900">
+              {formatCurrency(summaryData.totalDespesas)}
+            </div>
+            <p className="text-xs text-rose-600 font-medium mt-1 flex items-center gap-1">
+              <ArrowDownCircle size={12} /> Saídas
+            </p>
+          </div>
+        </div>
+
+        {/* Transações */}
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
           <div className="flex justify-between items-start mb-4">
             <div>
               <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -265,56 +297,32 @@ export default function FinancialDashboard() {
           </div>
           <div className="text-xs text-gray-400">Resultado operacional</div>
         </div>
-
-        {healthScore && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-transparent to-gray-50 rounded-bl-full -mr-4 -mt-4"></div>
-            <div className="flex justify-between items-start mb-4 relative z-10">
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                  Saúde Financeira
-                </p>
-                <h3
-                  className="text-2xl font-bold mt-1"
-                  style={{ color: healthScore.color }}
-                >
-                  {healthScore.classification}
-                </h3>
-              </div>
-              <div
-                className="p-2 rounded-lg"
-                style={{
-                  backgroundColor: `${healthScore.color}20`,
-                  color: healthScore.color,
-                }}
-              >
-                <TrendingUp size={24} />
-              </div>
-            </div>
-            <div className="w-full bg-gray-100 rounded-full h-2 mb-2">
-              <div
-                className="h-2 rounded-full transition-all duration-1000"
-                style={{
-                  width: `${healthScore.health_score}%`,
-                  backgroundColor: healthScore.color,
-                }}
-              ></div>
-            </div>
-            <div className="text-xs text-gray-400 flex justify-between">
-              <span>Score: {Math.round(healthScore.health_score)}/100</span>
-              <span>Margem: {healthScore.margem_operacional?.toFixed(1)}%</span>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Charts Section */}
+      {/* Charts Section - Redesigned */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <h3 className="text-lg font-bold text-gray-800 mb-6">
-            Evolução Mensal
-          </h3>
-          <div className="h-80">
+        <div className="lg:col-span-2 rounded-xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h3 className="text-lg font-bold tracking-tight text-slate-900">
+                Evolução do Caixa
+              </h3>
+              <p className="text-sm text-slate-500">
+                Receitas vs. Despesas no período
+              </p>
+            </div>
+            <div className="flex gap-4 text-xs font-bold">
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-indigo-600"></div>{" "}
+                Receita
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-slate-400"></div>{" "}
+                Despesa
+              </div>
+            </div>
+          </div>
+          <div className="flex-grow h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
