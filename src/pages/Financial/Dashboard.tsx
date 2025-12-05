@@ -209,93 +209,99 @@ export default function FinancialDashboard() {
         </div>
       }
     >
-      {/* Summary Cards - Redesigned */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {/* Saldo */}
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
-          <div className="absolute top-0 right-0 -mt-2 -mr-2 text-indigo-50 opacity-50">
-            <Wallet size={80} strokeWidth={1.5} />
-          </div>
-          <div className="flex items-center justify-between pb-2 relative">
+      {/* KPIs - Padrão Mural de Comunicados */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {/* Saldo Período */}
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">
               Saldo Período
             </h3>
-            <div className="bg-indigo-50 p-1.5 rounded-md text-indigo-600">
-              <Wallet className="h-4 w-4" />
+            <div className="bg-indigo-50 p-2 rounded-lg">
+              <Wallet className="h-5 w-5 text-indigo-600" />
             </div>
           </div>
-          <div className="relative">
-            <div
-              className={`text-3xl font-extrabold truncate tracking-tight ${
-                summaryData.saldo >= 0 ? "text-emerald-600" : "text-rose-600"
-              }`}
-            >
-              {formatCurrency(summaryData.saldo)}
-            </div>
-            <p className="text-xs font-medium text-slate-400 mt-1">
-              Receitas - Despesas
-            </p>
+          <div
+            className={`text-3xl font-extrabold tracking-tight ${
+              summaryData.saldo >= 0 ? "text-emerald-600" : "text-rose-600"
+            }`}
+          >
+            {formatCurrency(summaryData.saldo)}
           </div>
+          <p className="text-xs font-medium text-slate-400 mt-2">
+            Resultado operacional
+          </p>
         </div>
 
-        {/* Receitas */}
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
-          <div className="flex items-center justify-between pb-2">
+        {/* Receita Total */}
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">
               Receita Total
             </h3>
-            <div className="bg-emerald-50 p-1.5 rounded-md text-emerald-600">
-              <TrendingUp className="h-4 w-4" />
+            <div className="bg-emerald-50 p-2 rounded-lg">
+              <TrendingUp className="h-5 w-5 text-emerald-600" />
             </div>
           </div>
-          <div>
-            <div className="text-3xl font-extrabold truncate tracking-tight text-slate-900">
-              {formatCurrency(summaryData.totalReceitas)}
-            </div>
-            <p className="text-xs text-emerald-600 font-medium mt-1 flex items-center gap-1">
-              <ArrowUpCircle size={12} /> Entradas
-            </p>
+          <div className="text-3xl font-extrabold tracking-tight text-slate-900">
+            {formatCurrency(summaryData.totalReceitas)}
           </div>
+          <p className="text-xs text-emerald-600 font-medium mt-2 flex items-center gap-1">
+            <ArrowUpCircle size={12} /> Entradas
+          </p>
         </div>
 
-        {/* Despesas */}
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
-          <div className="flex items-center justify-between pb-2">
+        {/* Despesa Total */}
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">
               Despesa Total
             </h3>
-            <div className="bg-rose-50 p-1.5 rounded-md text-rose-600">
-              <TrendingDown className="h-4 w-4" />
+            <div className="bg-rose-50 p-2 rounded-lg">
+              <TrendingDown className="h-5 w-5 text-rose-600" />
             </div>
           </div>
-          <div>
-            <div className="text-3xl font-extrabold truncate tracking-tight text-slate-900">
-              {formatCurrency(summaryData.totalDespesas)}
-            </div>
-            <p className="text-xs text-rose-600 font-medium mt-1 flex items-center gap-1">
-              <ArrowDownCircle size={12} /> Saídas
-            </p>
+          <div className="text-3xl font-extrabold tracking-tight text-slate-900">
+            {formatCurrency(summaryData.totalDespesas)}
           </div>
+          <p className="text-xs text-rose-600 font-medium mt-2 flex items-center gap-1">
+            <ArrowDownCircle size={12} /> Saídas
+          </p>
         </div>
+      </div>
 
-        {/* Transações */}
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                Saldo
-              </p>
-              <h3
-                className={`text-2xl font-bold mt-1 ${summaryData.saldo >= 0 ? "text-blue-600" : "text-red-600"}`}
+      {/* Filtros Horizontais - Padrão Mural */}
+      <div className="mb-6 overflow-x-auto">
+        <div className="flex gap-2 pb-2">
+          <button
+            onClick={() => setSelectedMonth("all")}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-colors shrink-0 ${
+              selectedMonth === "all"
+                ? "bg-slate-900 text-white"
+                : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            <Calendar className="h-4 w-4" />
+            Todos
+          </button>
+          {Array.from({ length: 9 }, (_, i) => {
+            const monthName = new Date(2025, i, 1).toLocaleString("pt-BR", {
+              month: "short",
+            });
+            return (
+              <button
+                key={i}
+                onClick={() => setSelectedMonth(i)}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-colors shrink-0 ${
+                  selectedMonth === i
+                    ? "bg-emerald-600 text-white"
+                    : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+                }`}
               >
-                {formatCurrency(summaryData.saldo)}
-              </h3>
-            </div>
-            <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
-              <Wallet size={24} />
-            </div>
-          </div>
-          <div className="text-xs text-gray-400">Resultado operacional</div>
+                {monthName.charAt(0).toUpperCase() + monthName.slice(1)}
+              </button>
+            );
+          })}
         </div>
       </div>
 
