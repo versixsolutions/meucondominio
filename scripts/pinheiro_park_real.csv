@@ -1,0 +1,286 @@
+category_code;description;amount;reference_month;payment_date
+1.1.01;"Taxa de Condomínio - Jan/25";29250.2;2025-01-01;2025-01-10
+1.1.01;"Taxa de Condomínio - Fev/25";29250.2;2025-02-01;2025-02-10
+1.1.01;"Taxa de Condomínio - Mar/25";29250.2;2025-03-01;2025-03-10
+1.1.01;"Taxa de Condomínio - Abr/25";40115.28;2025-04-01;2025-04-10
+1.1.01;"Taxa de Condomínio - Mai/25";40115.28;2025-05-01;2025-05-10
+1.1.01;"Taxa de Condomínio - Jun/25";40115.28;2025-06-01;2025-06-10
+1.1.01;"Taxa de Condomínio - Jul/25";40115.28;2025-07-01;2025-07-10
+1.1.01;"Taxa de Condomínio - Ago/25";40115.28;2025-08-01;2025-08-10
+1.1.01;"Taxa de Condomínio - Set/25";40115.28;2025-09-01;2025-09-10
+1.1.03;"Taxa Extra - Jan/25";19170.03;2025-01-01;2025-01-10
+1.1.03;"Taxa Extra - Fev/25";19170.03;2025-02-01;2025-02-10
+1.1.03;"Taxa Extra - Mai/25";3240.38;2025-05-01;2025-05-10
+1.1.03;"Taxa Extra - Jun/25";2227.61;2025-06-01;2025-06-10
+1.1.03;"Taxa Extra - Jul/25";2209.2;2025-07-01;2025-07-10
+1.1.03;"Taxa Extra - Ago/25";2209.2;2025-08-01;2025-08-10
+1.1.03;"Taxa Extra - Set/25";2209.2;2025-09-01;2025-09-10
+1.1.05;"Taxa de Salão de Festas - Jan/25";369.96;2025-01-01;2025-01-10
+1.1.05;"Taxa de Salão de Festas - Fev/25";225;2025-02-01;2025-02-10
+1.1.05;"Taxa de Salão de Festas - Mar/25";468.28;2025-03-01;2025-03-10
+1.1.05;"Taxa de Salão de Festas - Abr/25";508.72;2025-04-01;2025-04-10
+1.1.05;"Taxa de Salão de Festas - Mai/25";305.97;2025-05-01;2025-05-10
+1.1.05;"Taxa de Salão de Festas - Jun/25";305.94;2025-06-01;2025-06-10
+1.1.05;"Taxa de Salão de Festas - Jul/25";509.92;2025-07-01;2025-07-10
+1.1.05;"Taxa de Salão de Festas - Ago/25";407.97;2025-08-01;2025-08-10
+1.1.05;"Taxa de Salão de Festas - Set/25";101.98;2025-09-01;2025-09-10
+1.1.109;"Aluguel de Áreas de Lazer - Set/25";215.02;2025-09-01;2025-09-10
+1.1.144;"Receita minimercado autônomo - Jan/25";584.45;2025-01-01;2025-01-10
+1.1.144;"Receita minimercado autônomo - Fev/25";531.04;2025-02-01;2025-02-10
+1.1.144;"Receita minimercado autônomo - Mar/25";328.34;2025-03-01;2025-03-10
+1.1.144;"Receita minimercado autônomo - Abr/25";454.11;2025-04-01;2025-04-10
+1.1.144;"Receita minimercado autônomo - Mai/25";520.09;2025-05-01;2025-05-10
+1.1.144;"Receita minimercado autônomo - Jun/25";532.32;2025-06-01;2025-06-10
+1.1.144;"Receita minimercado autônomo - Jul/25";582.56;2025-07-01;2025-07-10
+1.1.144;"Receita minimercado autônomo - Ago/25";403.62;2025-08-01;2025-08-10
+1.1.144;"Receita minimercado autônomo - Set/25";515.27;2025-09-01;2025-09-10
+1.1.152;"Crédito para realização de eventos - Abr/25";2169.79;2025-04-01;2025-04-10
+1.1.152;"Crédito para realização de eventos - Mai/25";3055;2025-05-01;2025-05-10
+1.1.152;"Crédito para realização de eventos - Jun/25";230;2025-06-01;2025-06-10
+1.1.152;"Crédito para realização de eventos - Jul/25";2380;2025-07-01;2025-07-10
+1.1.152;"Crédito para realização de eventos - Ago/25";275;2025-08-01;2025-08-10
+1.1.152;"Crédito para realização de eventos - Set/25";90;2025-09-01;2025-09-10
+1.1.83;"Rep. Taxa Não Garantidas Comp.Ant - Jun/25";899.73;2025-06-01;2025-06-10
+1.2.02;"Multas - Jun/25";2039.76;2025-06-01;2025-06-10
+1.2.02;"Multas - Jul/25";679.92;2025-07-01;2025-07-10
+1.2.02;"Multas - Set/25";339.96;2025-09-01;2025-09-10
+1.2.03;"Rendimentos - Mai/25";2.44;2025-05-01;2025-05-10
+1.2.03;"Rendimentos - Jun/25";4.37;2025-06-01;2025-06-10
+1.2.03;"Rendimentos - Jul/25";3.48;2025-07-01;2025-07-10
+1.2.03;"Rendimentos - Ago/25";1.48;2025-08-01;2025-08-10
+1.2.03;"Rendimentos - Set/25";2.22;2025-09-01;2025-09-10
+1.2.05;"Empréstimos - Mai/25";90033.31;2025-05-01;2025-05-10
+1.2.06;"Estornos - Jul/25";300;2025-07-01;2025-07-10
+1.4.08;"Reembolso - Jan/25";12175;2025-01-01;2025-01-10
+1.4.08;"Reembolso - Fev/25";34780;2025-02-01;2025-02-10
+1.4.08;"Reembolso - Jun/25";7406.99;2025-06-01;2025-06-10
+1.6;"Outras Receitas - Mar/25";73.5;2025-03-01;2025-03-10
+2.1.13;"Pró-Labore - Mar/25";-1518;2025-03-01;2025-03-10
+2.1.13;"Pró-Labore - Mai/25";-3036;2025-05-01;2025-05-10
+2.1.13;"Pró-Labore - Jul/25";-3036;2025-07-01;2025-07-10
+2.1.13;"Pró-Labore - Set/25";-1518;2025-09-01;2025-09-10
+2.1.20;"Prest. Serv. de Zeladoria e Portaria - Jun/25";-150;2025-06-01;2025-06-10
+2.1.20;"Prest. Serv. de Zeladoria e Portaria - Jul/25";-150;2025-07-01;2025-07-10
+2.1.53;"Serviços de Vigilância - Jul/25";-150;2025-07-01;2025-07-10
+2.1.54;"Treinamentos - Ago/25";-500;2025-08-01;2025-08-10
+2.1.59;"Portaria Eletrônica / Virtual - Jan/25";-5721;2025-01-01;2025-01-10
+2.1.59;"Portaria Eletrônica / Virtual - Fev/25";-5721;2025-02-01;2025-02-10
+2.1.59;"Portaria Eletrônica / Virtual - Mar/25";-11754.8;2025-03-01;2025-03-10
+2.1.59;"Portaria Eletrônica / Virtual - Abr/25";-7103.14;2025-04-01;2025-04-10
+2.1.73;"Serv. Zeladoria e Limpeza -Terceirização de MO - Fev/25";-7449.9;2025-02-01;2025-02-10
+2.1.73;"Serv. Zeladoria e Limpeza -Terceirização de MO - Mar/25";-14899.8;2025-03-01;2025-03-10
+2.1.73;"Serv. Zeladoria e Limpeza -Terceirização de MO - Abr/25";-9025.7;2025-04-01;2025-04-10
+2.1.73;"Serv. Zeladoria e Limpeza -Terceirização de MO - Mai/25";-9025.7;2025-05-01;2025-05-10
+2.1.73;"Serv. Zeladoria e Limpeza -Terceirização de MO - Jul/25";-25521.4;2025-07-01;2025-07-10
+2.1.73;"Serv. Zeladoria e Limpeza -Terceirização de MO - Set/25";-12509.7;2025-09-01;2025-09-10
+2.2.01;"INSS - Abr/25";-770.35;2025-04-01;2025-04-10
+2.2.01;"INSS - Mai/25";-470.58;2025-05-01;2025-05-10
+2.2.01;"INSS - Jun/25";-470.58;2025-06-01;2025-06-10
+2.2.01;"INSS - Jul/25";-470.58;2025-07-01;2025-07-10
+2.2.01;"INSS - Ago/25";-470.58;2025-08-01;2025-08-10
+2.2.01;"INSS - Set/25";-470.58;2025-09-01;2025-09-10
+2.2.15;"Impostos, Taxas e Licenças - Jun/25";-2135.72;2025-06-01;2025-06-10
+2.2.15;"Impostos, Taxas e Licenças - Ago/25";-103.03;2025-08-01;2025-08-10
+2.2.26;"Retenção de PIS/COFINS/CSLL - Jan/25";-279;2025-01-01;2025-01-10
+2.2.26;"Retenção de PIS/COFINS/CSLL - Fev/25";-279;2025-02-01;2025-02-10
+2.2.26;"Retenção de PIS/COFINS/CSLL - Mar/25";-1666.45;2025-03-01;2025-03-10
+2.2.26;"Retenção de PIS/COFINS/CSLL - Abr/25";-338.91;2025-04-01;2025-04-10
+2.2.26;"Retenção de PIS/COFINS/CSLL - Mai/25";-286.49;2025-05-01;2025-05-10
+2.2.26;"Retenção de PIS/COFINS/CSLL - Jun/25";-159.01;2025-06-01;2025-06-10
+2.2.29;"Anotação Responsabilidade Técnica ART/RTT - Ago/25";-103.03;2025-08-01;2025-08-10
+2.3.01;"Energia Elétrica - Fev/25";-8053.91;2025-02-01;2025-02-10
+2.3.01;"Energia Elétrica - Mar/25";-2841.07;2025-03-01;2025-03-10
+2.3.01;"Energia Elétrica - Abr/25";-3421.08;2025-04-01;2025-04-10
+2.3.01;"Energia Elétrica - Mai/25";-3689.97;2025-05-01;2025-05-10
+2.3.01;"Energia Elétrica - Jun/25";-3220.77;2025-06-01;2025-06-10
+2.3.01;"Energia Elétrica - Jul/25";-1690.75;2025-07-01;2025-07-10
+2.3.01;"Energia Elétrica - Ago/25";-1501.86;2025-08-01;2025-08-10
+2.3.01;"Energia Elétrica - Set/25";-1530.25;2025-09-01;2025-09-10
+2.3.02;"Água e Esgoto - Jan/25";-2851.84;2025-01-01;2025-01-10
+2.3.02;"Água e Esgoto - Mai/25";-6734.66;2025-05-01;2025-05-10
+2.3.02;"Água e Esgoto - Jul/25";-8550.89;2025-07-01;2025-07-10
+2.3.02;"Água e Esgoto - Ago/25";-959.7;2025-08-01;2025-08-10
+2.3.02;"Água e Esgoto - Set/25";-7214.44;2025-09-01;2025-09-10
+2.3.05;"Taxa de administração - Jan/25";-678.6;2025-01-01;2025-01-10
+2.3.05;"Taxa de administração - Fev/25";-678.6;2025-02-01;2025-02-10
+2.3.05;"Taxa de administração - Mar/25";-678.6;2025-03-01;2025-03-10
+2.3.05;"Taxa de administração - Abr/25";-930.67;2025-04-01;2025-04-10
+2.3.05;"Taxa de administração - Mai/25";-930.67;2025-05-01;2025-05-10
+2.3.05;"Taxa de administração - Jun/25";-930.67;2025-06-01;2025-06-10
+2.3.05;"Taxa de administração - Jul/25";-930.67;2025-07-01;2025-07-10
+2.3.05;"Taxa de administração - Ago/25";-930.67;2025-08-01;2025-08-10
+2.3.05;"Taxa de administração - Set/25";-922.79;2025-09-01;2025-09-10
+2.3.07;"Seguro - Abr/25";-849.35;2025-04-01;2025-04-10
+2.3.07;"Seguro - Mai/25";-1698.76;2025-05-01;2025-05-10
+2.3.07;"Seguro - Jul/25";-1698.76;2025-07-01;2025-07-10
+2.3.07;"Seguro - Set/25";-849.38;2025-09-01;2025-09-10
+2.3.10;"Desp. c/ Cartório, Reg. e Autent. - Mar/25";-155.91;2025-03-01;2025-03-10
+2.3.10;"Desp. c/ Cartório, Reg. e Autent. - Abr/25";-275.08;2025-04-01;2025-04-10
+2.3.10;"Desp. c/ Cartório, Reg. e Autent. - Jun/25";-158.32;2025-06-01;2025-06-10
+2.3.104;"Recarga celular pré pago - Ago/25";-25;2025-08-01;2025-08-10
+2.3.105;"Pagamento incorreto a reembolsar - Jan/25";-1900;2025-01-01;2025-01-10
+2.3.105;"Pagamento incorreto a reembolsar - Fev/25";-19500;2025-02-01;2025-02-10
+2.3.108;"Taxa da Garantidora - Jan/25";-1017.91;2025-01-01;2025-01-10
+2.3.108;"Taxa da Garantidora - Fev/25";-1017.91;2025-02-01;2025-02-10
+2.3.108;"Taxa da Garantidora - Mar/25";-1017.91;2025-03-01;2025-03-10
+2.3.108;"Taxa da Garantidora - Abr/25";-1396.01;2025-04-01;2025-04-10
+2.3.108;"Taxa da Garantidora - Mai/25";-1396.01;2025-05-01;2025-05-10
+2.3.108;"Taxa da Garantidora - Jun/25";-1396.01;2025-06-01;2025-06-10
+2.3.108;"Taxa da Garantidora - Jul/25";-1396.01;2025-07-01;2025-07-10
+2.3.108;"Taxa da Garantidora - Ago/25";-1396.01;2025-08-01;2025-08-10
+2.3.108;"Taxa da Garantidora - Set/25";-1396.01;2025-09-01;2025-09-10
+2.3.15;"Garantia de Taxa Extra - Jan/25";-1420;2025-01-01;2025-01-10
+2.3.15;"Garantia de Taxa Extra - Fev/25";-1420;2025-02-01;2025-02-10
+2.3.15;"Garantia de Taxa Extra - Mai/25";-240.03;2025-05-01;2025-05-10
+2.3.15;"Garantia de Taxa Extra - Jun/25";-165.01;2025-06-01;2025-06-10
+2.3.15;"Garantia de Taxa Extra - Jul/25";-163.64;2025-07-01;2025-07-10
+2.3.15;"Garantia de Taxa Extra - Ago/25";-163.64;2025-08-01;2025-08-10
+2.3.15;"Garantia de Taxa Extra - Set/25";-163.64;2025-09-01;2025-09-10
+2.3.22;"Despesa c/ Confraternização - Abr/25";-1690.4;2025-04-01;2025-04-10
+2.3.22;"Despesa c/ Confraternização - Mai/25";-539;2025-05-01;2025-05-10
+2.3.22;"Despesa c/ Confraternização - Jun/25";-1559;2025-06-01;2025-06-10
+2.3.22;"Despesa c/ Confraternização - Jul/25";-9;2025-07-01;2025-07-10
+2.3.22;"Despesa c/ Confraternização - Set/25";-131.88;2025-09-01;2025-09-10
+2.3.24;"Antecipação - Jun/25";-3703.5;2025-06-01;2025-06-10
+2.3.25;"Empréstimos - Mar/25";-1619.96;2025-03-01;2025-03-10
+2.3.25;"Empréstimos - Abr/25";-3703.49;2025-04-01;2025-04-10
+2.3.25;"Empréstimos - Mai/25";-48733.79;2025-05-01;2025-05-10
+2.3.25;"Empréstimos - Jun/25";-3703.49;2025-06-01;2025-06-10
+2.3.25;"Empréstimos - Jul/25";-3703.49;2025-07-01;2025-07-10
+2.3.25;"Empréstimos - Ago/25";-3703.49;2025-08-01;2025-08-10
+2.3.25;"Empréstimos - Set/25";-3703.49;2025-09-01;2025-09-10
+2.3.35;"Participação em Assembleia - Jan/25";-773.46;2025-01-01;2025-01-10
+2.3.35;"Participação em Assembleia - Fev/25";-600;2025-02-01;2025-02-10
+2.3.35;"Participação em Assembleia - Abr/25";-550;2025-04-01;2025-04-10
+2.3.35;"Participação em Assembleia - Mai/25";-266.66;2025-05-01;2025-05-10
+2.3.35;"Participação em Assembleia - Jun/25";-300;2025-06-01;2025-06-10
+2.3.35;"Participação em Assembleia - Jul/25";-300;2025-07-01;2025-07-10
+2.3.35;"Participação em Assembleia - Ago/25";-833.33;2025-08-01;2025-08-10
+2.3.45;"Descontos - Jul/25";-472.11;2025-07-01;2025-07-10
+2.3.45;"Descontos - Ago/25";-472.1;2025-08-01;2025-08-10
+2.3.45;"Descontos - Set/25";-472.1;2025-09-01;2025-09-10
+2.3.48;"Reembolso - Jan/25";-75;2025-01-01;2025-01-10
+2.3.48;"Reembolso - Abr/25";-168.5;2025-04-01;2025-04-10
+2.3.48;"Reembolso - Mai/25";-110;2025-05-01;2025-05-10
+2.3.48;"Reembolso - Jun/25";-249.95;2025-06-01;2025-06-10
+2.3.48;"Reembolso - Ago/25";-117.98;2025-08-01;2025-08-10
+2.3.53;"Confecção de Adesivos - Jul/25";-320;2025-07-01;2025-07-10
+2.3.62;"Taxas Não Garantidas em Aberto - Jun/25";-2039.76;2025-06-01;2025-06-10
+2.3.62;"Taxas Não Garantidas em Aberto - Jul/25";-679.92;2025-07-01;2025-07-10
+2.3.62;"Taxas Não Garantidas em Aberto - Set/25";-339.96;2025-09-01;2025-09-10
+2.3.71;"Confraternização Festa Junina - Jul/25";-2300;2025-07-01;2025-07-10
+2.3.80;"Pulseiras de Identificação - Ago/25";-45;2025-08-01;2025-08-10
+2.4.01;"Móveis e Utensílios - Set/25";-1994.6;2025-09-01;2025-09-10
+2.4.03;"Máquinas e Equipamentos - Mai/25";-500;2025-05-01;2025-05-10
+2.4.03;"Máquinas e Equipamentos - Jul/25";-1001.25;2025-07-01;2025-07-10
+2.4.04;"Material de Limpeza e Conservação - Mar/25";-644.36;2025-03-01;2025-03-10
+2.4.04;"Material de Limpeza e Conservação - Abr/25";-3620.49;2025-04-01;2025-04-10
+2.4.04;"Material de Limpeza e Conservação - Mai/25";-714.28;2025-05-01;2025-05-10
+2.4.04;"Material de Limpeza e Conservação - Jul/25";-649.02;2025-07-01;2025-07-10
+2.4.04;"Material de Limpeza e Conservação - Ago/25";-541.18;2025-08-01;2025-08-10
+2.4.04;"Material de Limpeza e Conservação - Set/25";-131.34;2025-09-01;2025-09-10
+2.4.05;"Mat.de Escritório e Expediente - Jan/25";-44.49;2025-01-01;2025-01-10
+2.4.05;"Mat.de Escritório e Expediente - Fev/25";-44.49;2025-02-01;2025-02-10
+2.4.05;"Mat.de Escritório e Expediente - Mar/25";-44.49;2025-03-01;2025-03-10
+2.4.05;"Mat.de Escritório e Expediente - Abr/25";-44.49;2025-04-01;2025-04-10
+2.4.05;"Mat.de Escritório e Expediente - Mai/25";-94;2025-05-01;2025-05-10
+2.4.05;"Mat.de Escritório e Expediente - Jun/25";-44.49;2025-06-01;2025-06-10
+2.4.05;"Mat.de Escritório e Expediente - Jul/25";-147.76;2025-07-01;2025-07-10
+2.4.05;"Mat.de Escritório e Expediente - Ago/25";-44.49;2025-08-01;2025-08-10
+2.4.05;"Mat.de Escritório e Expediente - Set/25";-44.49;2025-09-01;2025-09-10
+2.4.07;"Mat.Elétricos e Acessórios - Mar/25";-409.9;2025-03-01;2025-03-10
+2.4.07;"Mat.Elétricos e Acessórios - Mai/25";-201.96;2025-05-01;2025-05-10
+2.4.07;"Mat.Elétricos e Acessórios - Jun/25";-36;2025-06-01;2025-06-10
+2.4.07;"Mat.Elétricos e Acessórios - Jul/25";-611.52;2025-07-01;2025-07-10
+2.4.07;"Mat.Elétricos e Acessórios - Set/25";-528.06;2025-09-01;2025-09-10
+2.4.09;"Mat. p/ Construção, Conserto e Reparo - Mar/25";-250.42;2025-03-01;2025-03-10
+2.4.09;"Mat. p/ Construção, Conserto e Reparo - Mai/25";-785.04;2025-05-01;2025-05-10
+2.4.09;"Mat. p/ Construção, Conserto e Reparo - Jul/25";-818.84;2025-07-01;2025-07-10
+2.4.13;"Confecção de chaves - Set/25";-70;2025-09-01;2025-09-10
+2.4.14;"Material Esportivo - Mai/25";-429.8;2025-05-01;2025-05-10
+2.4.17;"Material Para Sinalização - Set/25";-55.2;2025-09-01;2025-09-10
+2.4.21;"Material para Piscina - Jun/25";-639;2025-06-01;2025-06-10
+2.4.21;"Material para Piscina - Jul/25";-649;2025-07-01;2025-07-10
+2.4.21;"Material para Piscina - Ago/25";-1069.3;2025-08-01;2025-08-10
+2.4.21;"Material para Piscina - Set/25";-903.7;2025-09-01;2025-09-10
+2.4.28;"Ferramentas - Mar/25";-64.4;2025-03-01;2025-03-10
+2.4.29;"Peças e Acessorios - Mar/25";-134.7;2025-03-01;2025-03-10
+2.4.29;"Peças e Acessorios - Abr/25";-76.8;2025-04-01;2025-04-10
+2.4.29;"Peças e Acessorios - Mai/25";-228.9;2025-05-01;2025-05-10
+2.4.29;"Peças e Acessorios - Jun/25";-72.95;2025-06-01;2025-06-10
+2.4.29;"Peças e Acessorios - Set/25";-82;2025-09-01;2025-09-10
+2.4.33;"Compra de peças para portão - Mar/25";-150;2025-03-01;2025-03-10
+2.4.36;"Confecção de Faixas e Placas - Mai/25";-490;2025-05-01;2025-05-10
+2.4.52;"Aquisição de Piso Grama - Mar/25";-47000;2025-03-01;2025-03-10
+2.4.68;"Compra de Material de Jardim - Set/25";-219;2025-09-01;2025-09-10
+2.4.75;"Sistema de Energia Solar - Mai/25";-35303.78;2025-05-01;2025-05-10
+2.4.75;"Sistema de Energia Solar - Jun/25";-3982.26;2025-06-01;2025-06-10
+2.4.80;"Aquisição de Eletrodomésticos - Jan/25";-406.89;2025-01-01;2025-01-10
+2.4.80;"Aquisição de Eletrodomésticos - Set/25";-1480.1;2025-09-01;2025-09-10
+2.5.02;"Honorários Advocatícios - Mai/25";-1000;2025-05-01;2025-05-10
+2.5.02;"Honorários Advocatícios - Jun/25";-1000;2025-06-01;2025-06-10
+2.5.02;"Honorários Advocatícios - Jul/25";-2000;2025-07-01;2025-07-10
+2.5.02;"Honorários Advocatícios - Set/25";-1000;2025-09-01;2025-09-10
+2.5.101;"Manutenção do Playground e parquinho - Jun/25";-2300;2025-06-01;2025-06-10
+2.5.102;"Aplicação de grama sintética - Mar/25";-24000;2025-03-01;2025-03-10
+2.5.124;"Gerenciador financeiro Mobills - Jul/25";-159.9;2025-07-01;2025-07-10
+2.5.19;"Serviço de Metalurgico - Ago/25";-300;2025-08-01;2025-08-10
+2.5.19;"Serviço de Metalurgico - Set/25";-300;2025-09-01;2025-09-10
+2.5.21;"Serviços Elétricos - Mar/25";-2210.63;2025-03-01;2025-03-10
+2.5.21;"Serviços Elétricos - Mai/25";-640.19;2025-05-01;2025-05-10
+2.5.21;"Serviços Elétricos - Jul/25";-1280.38;2025-07-01;2025-07-10
+2.5.21;"Serviços Elétricos - Set/25";-640.19;2025-09-01;2025-09-10
+2.5.23;"Serviço de Pinturas - Mai/25";-350;2025-05-01;2025-05-10
+2.5.31;"Desinsetização e/ou Desinfestação em Geral - Fev/25";-980;2025-02-01;2025-02-10
+2.5.31;"Desinsetização e/ou Desinfestação em Geral - Jul/25";-800;2025-07-01;2025-07-10
+2.5.35;"Poda de Árvores, Plantas e Capina - Fev/25";-1380;2025-02-01;2025-02-10
+2.5.35;"Poda de Árvores, Plantas e Capina - Mar/25";-1260;2025-03-01;2025-03-10
+2.5.35;"Poda de Árvores, Plantas e Capina - Abr/25";-1290;2025-04-01;2025-04-10
+2.5.35;"Poda de Árvores, Plantas e Capina - Jun/25";-1867.25;2025-06-01;2025-06-10
+2.5.36;"Reformas de Móveis e Eletrodomésticos - Ago/25";-315;2025-08-01;2025-08-10
+2.5.62;"Sistema de Segurança - Set/25";-6500;2025-09-01;2025-09-10
+2.5.68;"Serviço de Segurança - Mai/25";-1400;2025-05-01;2025-05-10
+2.6.05;"Manutenção de Máquinas e Equip. - Mai/25";-200;2025-05-01;2025-05-10
+2.6.05;"Manutenção de Máquinas e Equip. - Jun/25";-200;2025-06-01;2025-06-10
+2.6.05;"Manutenção de Máquinas e Equip. - Ago/25";-250;2025-08-01;2025-08-10
+2.6.08;"Manutenção de Extintores ou Similares - Ago/25";-210;2025-08-01;2025-08-10
+2.6.09;"Manut. Conserv. e Instalações - Fev/25";-510;2025-02-01;2025-02-10
+2.6.09;"Manut. Conserv. e Instalações - Mar/25";-500;2025-03-01;2025-03-10
+2.6.09;"Manut. Conserv. e Instalações - Abr/25";-280;2025-04-01;2025-04-10
+2.6.09;"Manut. Conserv. e Instalações - Mai/25";-600;2025-05-01;2025-05-10
+2.6.14;"Manutenção de Equipamentos de Segurança - Jan/25";-200;2025-01-01;2025-01-10
+2.6.14;"Manutenção de Equipamentos de Segurança - Fev/25";-1082.71;2025-02-01;2025-02-10
+2.6.14;"Manutenção de Equipamentos de Segurança - Mai/25";-6500;2025-05-01;2025-05-10
+2.6.14;"Manutenção de Equipamentos de Segurança - Jul/25";-13000;2025-07-01;2025-07-10
+2.6.16;"Manutenção do Portão - Mar/25";-270;2025-03-01;2025-03-10
+2.6.16;"Manutenção do Portão - Mai/25";-1233.2;2025-05-01;2025-05-10
+2.6.23;"Manut. da Estação de Tratamento de Esgoto (ETE) - Fev/25";-4000;2025-02-01;2025-02-10
+2.6.23;"Manut. da Estação de Tratamento de Esgoto (ETE) - Mar/25";-3600;2025-03-01;2025-03-10
+2.6.23;"Manut. da Estação de Tratamento de Esgoto (ETE) - Abr/25";-3600;2025-04-01;2025-04-10
+2.6.23;"Manut. da Estação de Tratamento de Esgoto (ETE) - Mai/25";-3600;2025-05-01;2025-05-10
+2.6.23;"Manut. da Estação de Tratamento de Esgoto (ETE) - Jul/25";-8000;2025-07-01;2025-07-10
+2.6.23;"Manut. da Estação de Tratamento de Esgoto (ETE) - Set/25";-4400;2025-09-01;2025-09-10
+2.7.01;"Despesas Bancárias - Jan/25";-181.57;2025-01-01;2025-01-10
+2.7.01;"Despesas Bancárias - Fev/25";-159.64;2025-02-01;2025-02-10
+2.7.01;"Despesas Bancárias - Mar/25";-88.29;2025-03-01;2025-03-10
+2.7.01;"Despesas Bancárias - Abr/25";-106.24;2025-04-01;2025-04-10
+2.7.01;"Despesas Bancárias - Mai/25";-123.72;2025-05-01;2025-05-10
+2.7.01;"Despesas Bancárias - Jun/25";-107.26;2025-06-01;2025-06-10
+2.7.01;"Despesas Bancárias - Jul/25";-114.7;2025-07-01;2025-07-10
+2.7.01;"Despesas Bancárias - Ago/25";-96.41;2025-08-01;2025-08-10
+2.7.01;"Despesas Bancárias - Set/25";-91.07;2025-09-01;2025-09-10
+2.7.04;"Tarifas e Boletos - Jan/25";-310;2025-01-01;2025-01-10
+2.7.04;"Tarifas e Boletos - Fev/25";-312.5;2025-02-01;2025-02-10
+2.7.04;"Tarifas e Boletos - Mar/25";-297.5;2025-03-01;2025-03-10
+2.7.04;"Tarifas e Boletos - Abr/25";-295;2025-04-01;2025-04-10
+2.7.04;"Tarifas e Boletos - Mai/25";-312.5;2025-05-01;2025-05-10
+2.7.04;"Tarifas e Boletos - Jun/25";-320;2025-06-01;2025-06-10
+2.7.04;"Tarifas e Boletos - Jul/25";-317.5;2025-07-01;2025-07-10
+2.7.04;"Tarifas e Boletos - Ago/25";-312.5;2025-08-01;2025-08-10
+2.7.04;"Tarifas e Boletos - Set/25";-315;2025-09-01;2025-09-10
+2.7.08;"Estorno - Jul/25";-300;2025-07-01;2025-07-10
+2.7.10;"IR s/ Poupança - Mai/25";-0.52;2025-05-01;2025-05-10
+2.7.10;"IR s/ Poupança - Jun/25";-0.94;2025-06-01;2025-06-10
+2.7.10;"IR s/ Poupança - Jul/25";-0.73;2025-07-01;2025-07-10
+2.7.10;"IR s/ Poupança - Ago/25";-0.32;2025-08-01;2025-08-10
+2.7.10;"IR s/ Poupança - Set/25";-0.46;2025-09-01;2025-09-10

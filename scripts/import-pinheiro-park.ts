@@ -52,7 +52,7 @@ async function importData() {
   console.log(`🏢 Condomínio ID: ${CONDOMINIO_ID}`);
 
   // Verificar se existe arquivo CSV para importar
-  const csvPath = "scripts/dados_financeiros.csv";
+  const csvPath = "scripts/pinheiro_park_real.csv";
   if (fs.existsSync(csvPath)) {
     console.log("📂 Arquivo CSV encontrado! Processando...");
     const csvContent = fs.readFileSync(csvPath, "utf-8");
@@ -164,6 +164,19 @@ async function importData() {
     );
     // Tentar buscar o ID se possível ou continuar apenas para teste
   }
+
+  // 0. Limpar dados existentes para evitar duplicidade
+  console.log("🧹 Limpando transações existentes...");
+  const { error: deleteError } = await supabase
+    .from("financial_transactions")
+    .delete()
+    .eq("condominio_id", CONDOMINIO_ID);
+
+  if (deleteError) {
+    console.error("❌ Erro ao limpar dados:", deleteError);
+    return;
+  }
+  console.log("✅ Dados antigos removidos.");
 
   // Inserir em lotes de 100
   for (let i = 0; i < transactions.length; i += 100) {

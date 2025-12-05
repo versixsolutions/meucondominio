@@ -111,10 +111,10 @@ export default function FinancialDashboard() {
   // Process Data for Charts & Summary
   const summaryData = useMemo(() => {
     const filtered = transactions.filter((t) => {
-      const date = new Date(t.reference_month);
-      const yearMatch = date.getFullYear() === selectedYear;
-      const monthMatch =
-        selectedMonth === "all" || date.getMonth() === selectedMonth;
+      // Extrair ano e mês diretamente da string para evitar problemas de timezone
+      const [year, month] = t.reference_month.split("-").map(Number);
+      const yearMatch = year === selectedYear;
+      const monthMatch = selectedMonth === "all" || month - 1 === selectedMonth;
       return yearMatch && monthMatch;
     });
 
@@ -149,10 +149,14 @@ export default function FinancialDashboard() {
     }
 
     transactions.forEach((t) => {
-      const date = new Date(t.reference_month);
-      if (date.getFullYear() !== selectedYear) return;
+      // Extrair ano e mês diretamente da string para evitar problemas de timezone
+      const [year, month] = t.reference_month
+        .split("-")
+        .slice(0, 2)
+        .map(Number);
+      if (year !== selectedYear) return;
 
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      const key = `${year}-${String(month).padStart(2, "0")}`;
       if (monthlyData[key]) {
         if (t.amount > 0) {
           monthlyData[key].receitas += t.amount;
@@ -367,12 +371,12 @@ export default function FinancialDashboard() {
           </h3>
           <div className="space-y-4">
             {transactions
-              .filter(
-                (t) =>
-                  t.amount < 0 &&
-                  (selectedMonth === "all" ||
-                    new Date(t.reference_month).getMonth() === selectedMonth),
-              )
+              .filter((t) => {
+                if (t.amount >= 0) return false;
+                if (selectedMonth === "all") return true;
+                const [, month] = t.reference_month.split("-").map(Number);
+                return month - 1 === selectedMonth;
+              })
               .sort((a, b) => a.amount - b.amount) // Sort by most negative (largest expense)
               .slice(0, 5)
               .map((t) => (
@@ -431,11 +435,11 @@ export default function FinancialDashboard() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {transactions
-                .filter(
-                  (t) =>
-                    selectedMonth === "all" ||
-                    new Date(t.reference_month).getMonth() === selectedMonth,
-                )
+                .filter((t) => {
+                  if (selectedMonth === "all") return true;
+                  const [, month] = t.reference_month.split("-").map(Number);
+                  return month - 1 === selectedMonth;
+                })
                 .slice(0, 10)
                 .map((t) => (
                   <tr key={t.id} className="hover:bg-gray-50 transition">
