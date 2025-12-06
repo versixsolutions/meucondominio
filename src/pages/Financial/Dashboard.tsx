@@ -9,6 +9,7 @@ import {
   X,
   BarChart3,
   LineChart as LineChartIcon,
+  AlertTriangle,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { formatCurrency, formatDate } from "../../lib/utils";
@@ -41,15 +42,189 @@ interface MonthlySummary {
   saldo: number;
 }
 
+interface DashboardSummary {
+  totalReceitas: number;
+  totalDespesas: number;
+  saldo: number;
+  count: number;
+  inadimplenciaMes: number | null;
+  inadimplenciaTotal: number | null;
+}
+
+interface InadimplenciaRecord {
+  id: string;
+  condominio_id: string;
+  reference_month: string;
+  inadimplencia_mes: number | null;
+  inadimplencia_total: number | null;
+}
+
+interface InadimplenciaFormProps {
+  condominioId: string;
+  defaultMonth: string;
+  onSuccess: () => void;
+  onCancel: () => void;
+}
+
+const InadimplenciaForm: React.FC<InadimplenciaFormProps> = ({
+  condominioId,
+  defaultMonth,
+  onSuccess,
+  onCancel,
+}) => {
+  const [month, setMonth] = useState(defaultMonth);
+  const [inadMes, setInadMes] = useState("0");
+  const [inadTotal, setInadTotal] = useState("0");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    const mesValue = parseFloat(inadMes.replace(",", "."));
+    const totalValue = parseFloat(inadTotal.replace(",", "."));
+
+    if (Number.isNaN(mesValue) || mesValue < 0) {
+      setError("Informe a inadimplência do mês (0 ou positivo)");
+      return;
+    }
+
+    if (Number.isNaN(totalValue) || totalValue < 0) {
+      setError("Informe a inadimplência total (0 ou positivo)");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { error: upsertError } = await supabase
+        .from("financial_inadimplencia")
+        .upsert(
+          {
+            condominio_id: condominioId,
+            reference_month: month,
+            inadimplencia_mes: mesValue,
+            inadimplencia_total: totalValue,
+          },
+          { onConflict: "condominio_id,reference_month" },
+        );
+
+      if (upsertError) throw upsertError;
+
+      setSuccess("Inadimplência registrada com sucesso.");
+      setTimeout(() => setSuccess(""), 2000);
+      onSuccess();
+    } catch (err: any) {
+      setError(err?.message || "Erro ao salvar inadimplência");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="flex justify-between items-start gap-4">
+        <div>
+          <h3 className="text-xl font-bold text-slate-900">Inadimplência</h3>
+          <p className="text-sm text-slate-600">
+            Informe o percentual de inadimplência do mês e o acumulado geral.
+          </p>
+        </div>
+      </div>
+
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 text-sm">
+          {success}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Referência (AAAA-MM)
+          </label>
+          <input
+            type="month"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            required
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Inadimplência do mês (%)
+          </label>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={inadMes}
+            onChange={(e) => setInadMes(e.target.value.replace(/[^\d.,]/g, ""))}
+            placeholder="0,0"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Inadimplência total (%)
+          </label>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={inadTotal}
+            onChange={(e) =>
+              setInadTotal(e.target.value.replace(/[^\d.,]/g, ""))
+            }
+            placeholder="0,0"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-3 pt-2">
+        <button
+          type="submit"
+          disabled={loading}
+          className="flex-1 bg-amber-600 hover:bg-amber-700 disabled:bg-slate-300 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+        >
+          {loading ? "Salvando..." : "Salvar inadimplência"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-6 py-2 border border-slate-300 text-slate-700 font-medium rounded-lg hover:bg-slate-50 transition-colors"
+        >
+          Cancelar
+        </button>
+      </div>
+    </form>
+  );
+};
+
 export default function FinancialDashboard() {
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedPeriods, setSelectedPeriods] = useState<string[]>([]);
   const [showTransactionForm, setShowTransactionForm] = useState(false);
+  const [modalMode, setModalMode] = useState<"transaction" | "inadimplencia">(
+    "transaction",
+  );
   const [condominioId, setCondominioId] = useState<string>("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [chartType, setChartType] = useState<"bar" | "line">("bar");
+  const [inadimplenciaEntries, setInadimplenciaEntries] = useState<
+    InadimplenciaRecord[]
+  >([]);
 
   // Verificar se usuário é síndico
   const isSindico =
@@ -98,7 +273,17 @@ export default function FinancialDashboard() {
         if (error) throw error;
         setTransactions(transData || []);
 
-        // 3. Fetch Health Check (Edge Function)
+        // 3. Buscar inadimplência
+        const { data: inadData, error: inadError } = await supabase
+          .from("financial_inadimplencia")
+          .select("*")
+          .eq("condominio_id", userData.condominio_id)
+          .order("reference_month", { ascending: true });
+
+        if (inadError) throw inadError;
+        setInadimplenciaEntries(inadData || []);
+
+        // 4. Fetch Health Check (Edge Function)
         await supabase.functions.invoke("financial-health-check", {
           body: { condominio_id: userData.condominio_id },
         });
@@ -115,7 +300,7 @@ export default function FinancialDashboard() {
   }, [user, refreshKey]);
 
   // Process Data for Charts & Summary
-  const summaryData = useMemo(() => {
+  const summaryData: DashboardSummary = useMemo(() => {
     const filtered = transactions.filter((t) => {
       // Se nenhum período selecionado, mostrar todos
       if (selectedPeriods.length === 0) return true;
@@ -135,8 +320,33 @@ export default function FinancialDashboard() {
 
     const saldo = totalReceitas - totalDespesas;
 
-    return { totalReceitas, totalDespesas, saldo, count: filtered.length };
-  }, [transactions, selectedPeriods]);
+    const currentPeriod = selectedPeriods[selectedPeriods.length - 1] || null;
+
+    const inadMes = currentPeriod
+      ? (inadimplenciaEntries.find(
+          (item) => item.reference_month.slice(0, 7) === currentPeriod,
+        )?.inadimplencia_mes ?? null)
+      : null;
+
+    const inadTotal = inadimplenciaEntries.length
+      ? (inadimplenciaEntries[inadimplenciaEntries.length - 1]
+          .inadimplencia_total ?? null)
+      : null;
+
+    return {
+      totalReceitas,
+      totalDespesas,
+      saldo,
+      count: filtered.length,
+      inadimplenciaMes: inadMes,
+      inadimplenciaTotal: inadTotal,
+    };
+  }, [transactions, selectedPeriods, inadimplenciaEntries]);
+
+  const formatPercent = (value: number | null) => {
+    if (value === null || Number.isNaN(value)) return "--";
+    return `${value.toFixed(1)}%`;
+  };
 
   const chartData = useMemo(() => {
     // Se nenhum período selecionado, retornar vazio
@@ -261,7 +471,7 @@ export default function FinancialDashboard() {
       }
     >
       {/* KPIs - Padrão Mural de Comunicados */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {/* Saldo Período */}
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-3">
@@ -318,6 +528,27 @@ export default function FinancialDashboard() {
           <p className="text-xs text-rose-600 font-medium mt-2 flex items-center gap-1">
             <ArrowDownCircle size={12} /> Saídas
           </p>
+        </div>
+
+        {/* Inadimplência */}
+        <div className="rounded-xl border border-amber-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-amber-700 uppercase tracking-wider">
+              Inadimplência
+            </h3>
+            <div className="bg-amber-50 p-2 rounded-lg">
+              <AlertTriangle className="h-5 w-5 text-amber-600" />
+            </div>
+          </div>
+          <div className="text-3xl font-extrabold tracking-tight text-amber-700">
+            {formatPercent(summaryData.inadimplenciaMes)}
+          </div>
+          <p className="text-xs font-medium text-amber-600 mt-2 mb-1">
+            Inadimplência do mês selecionado
+          </p>
+          <div className="text-sm text-amber-700 font-semibold">
+            Total: {formatPercent(summaryData.inadimplenciaTotal)}
+          </div>
         </div>
       </div>
 
@@ -401,27 +632,64 @@ export default function FinancialDashboard() {
       {/* Modal - Nova Transação */}
       {showTransactionForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             {/* Header do Modal */}
-            <div className="flex justify-between items-center p-6 border-b border-slate-200 sticky top-0 bg-white">
-              <h2 className="text-2xl font-bold text-slate-900">
-                Nova Transação
-              </h2>
-              <button
-                onClick={() => setShowTransactionForm(false)}
-                className="text-slate-500 hover:text-slate-700 p-1 hover:bg-slate-100 rounded"
-              >
-                <X className="w-6 h-6" />
-              </button>
+            <div className="flex flex-col gap-4 p-6 border-b border-slate-200 sticky top-0 bg-white">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-slate-900">Registrar</h2>
+                <button
+                  onClick={() => setShowTransactionForm(false)}
+                  className="text-slate-500 hover:text-slate-700 p-1 hover:bg-slate-100 rounded"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setModalMode("transaction")}
+                  className={`px-4 py-2 rounded-lg font-semibold text-sm border transition-colors ${
+                    modalMode === "transaction"
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  Nova Transação
+                </button>
+                <button
+                  onClick={() => setModalMode("inadimplencia")}
+                  className={`px-4 py-2 rounded-lg font-semibold text-sm border transition-colors ${
+                    modalMode === "inadimplencia"
+                      ? "bg-amber-500 text-white border-amber-500"
+                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  Inadimplência
+                </button>
+              </div>
             </div>
 
             {/* Conteúdo do Modal */}
             <div className="p-6">
-              {condominioId && (
+              {condominioId && modalMode === "transaction" && (
                 <TransactionForm
                   condominioId={condominioId}
                   month={new Date().toISOString().slice(0, 7)}
                   onSuccess={handleTransactionSuccess}
+                  onCancel={() => setShowTransactionForm(false)}
+                />
+              )}
+
+              {condominioId && modalMode === "inadimplencia" && (
+                <InadimplenciaForm
+                  condominioId={condominioId}
+                  defaultMonth={
+                    selectedPeriods[0] || new Date().toISOString().slice(0, 7)
+                  }
+                  onSuccess={() => {
+                    setShowTransactionForm(false);
+                    setRefreshKey((prev) => prev + 1);
+                  }}
                   onCancel={() => setShowTransactionForm(false)}
                 />
               )}
