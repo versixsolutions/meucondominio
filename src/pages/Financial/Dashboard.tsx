@@ -7,24 +7,23 @@ import {
   CartesianGrid,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
-  Cell,
 } from "recharts";
 import {
   ArrowUpCircle,
   ArrowDownCircle,
   Wallet,
-  AlertTriangle,
   Calendar,
-  Filter,
-  Download,
   TrendingUp,
   TrendingDown,
+  Plus,
+  X,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { formatCurrency, formatDate } from "../../lib/utils";
 import PageLayout from "../../components/PageLayout";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import { useAuth } from "../../contexts/AuthContext";
+import { TransactionForm } from "../../components/Financial/TransactionForm";
 
 // Types
 interface Transaction {
@@ -54,7 +53,9 @@ export default function FinancialDashboard() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number | "all">("all");
-  const [healthScore, setHealthScore] = useState<any>(null);
+  const [showTransactionForm, setShowTransactionForm] = useState(false);
+  const [condominioId, setCondominioId] = useState<string>("");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Fetch Data
   useEffect(() => {
@@ -70,6 +71,8 @@ export default function FinancialDashboard() {
           .single();
 
         if (!userData?.condominio_id) return;
+
+        setCondominioId(userData.condominio_id);
 
         // 2. Fetch Transactions
         let query = supabase
@@ -90,14 +93,11 @@ export default function FinancialDashboard() {
         setTransactions(transData || []);
 
         // 3. Fetch Health Check (Edge Function)
-        const { data: healthData } = await supabase.functions.invoke(
-          "financial-health-check",
-          {
-            body: { condominio_id: userData.condominio_id },
-          },
-        );
+        await supabase.functions.invoke("financial-health-check", {
+          body: { condominio_id: userData.condominio_id },
+        });
 
-        if (healthData) setHealthScore(healthData);
+        // Health check invoked for monitoring purposes
       } catch (error) {
         console.error("Error loading financial data:", error);
       } finally {
@@ -106,7 +106,7 @@ export default function FinancialDashboard() {
     }
 
     if (user) loadData();
-  }, [user]);
+  }, [user, refreshKey]);
 
   // Process Data for Charts & Summary
   const summaryData = useMemo(() => {
@@ -173,13 +173,25 @@ export default function FinancialDashboard() {
   if (loading)
     return <LoadingSpinner message="Carregando dados financeiros..." />;
 
+  const handleTransactionSuccess = () => {
+    setShowTransactionForm(false);
+    setRefreshKey((prev) => prev + 1);
+  };
+
   return (
     <PageLayout
       title="Painel Financeiro"
       subtitle="Visão geral das finanças do condomínio"
       icon="📊"
       headerAction={
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <button
+            onClick={() => setShowTransactionForm(true)}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Nova Transação
+          </button>
           <select
             className="bg-white border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-primary focus:border-primary block p-2.5"
             value={selectedYear}
@@ -495,6 +507,47 @@ export default function FinancialDashboard() {
           </table>
         </div>
       </div>
+
+      {/* Modal - Nova Transação */}
+      {showTransactionForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header do Modal */}
+            <div className="flex justify-between items-center p-6 border-b border-slate-200 sticky top-0 bg-white">
+              <h2 className="text-2xl font-bold text-slate-900">
+                Nova Transação
+              </h2>
+              <button
+                onClick={() => setShowTransactionForm(false)}
+                className="text-slate-500 hover:text-slate-700 p-1 hover:bg-slate-100 rounded"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Conteúdo do Modal */}
+            <div className="p-6">
+              {condominioId && (
+                <TransactionForm
+                  condominioId={condominioId}
+                  month={new Date().toISOString().slice(0, 7)}
+                  onSuccess={handleTransactionSuccess}
+                  onCancel={() => setShowTransactionForm(false)}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Overlay do Modal */}
+      {showTransactionForm && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setShowTransactionForm(false)}
+          style={{ pointerEvents: "auto" }}
+        />
+      )}
     </PageLayout>
   );
 }

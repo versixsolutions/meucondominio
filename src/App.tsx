@@ -34,6 +34,9 @@ const Comunicados = lazy(() => import("./pages/Comunicados"));
 const Votacoes = lazy(() => import("./pages/Votacoes"));
 const Transparencia = lazy(() => import("./pages/Transparencia"));
 const Financeiro = lazy(() => import("./pages/Financial/Dashboard")); // Novo Dashboard Financeiro
+const AddTransaction = lazy(
+  () => import("./pages/Financial/AddTransactionPage"),
+);
 const Assembleias = lazy(() => import("./pages/Assembleias"));
 const AssembleiaDetalhes = lazy(() => import("./pages/AssembleiaDetalhes"));
 const AssembleiaPresenca = lazy(() => import("./pages/AssembleiaPresenca"));
@@ -210,6 +213,10 @@ function AppRoutes() {
                 <Route
                   path="/transparencia/financeiro"
                   element={<Financeiro />}
+                />
+                <Route
+                  path="/transparencia/financeiro/adicionar-transacao"
+                  element={<AddTransaction />}
                 />
                 <Route
                   path="/transparencia/assembleias"
