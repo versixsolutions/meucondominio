@@ -19,6 +19,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { TransactionForm } from "../../components/Financial/TransactionForm";
 import { PeriodSelector } from "../../components/Financial/PeriodSelector";
 import { FinancialCharts } from "../../components/Financial/FinancialCharts";
+import BudgetPlanModal from "../../components/Financial/BudgetPlanModal";
 
 // Types
 interface Transaction {
@@ -243,6 +244,8 @@ export default function FinancialDashboard() {
   >([]);
   const [budgetAlerts, setBudgetAlerts] = useState<BudgetAlert[]>([]);
   const [alertMonth, setAlertMonth] = useState<string>("");
+  const [showBudgetPlanModal, setShowBudgetPlanModal] = useState(false);
+  const [condominioName, setCondominioName] = useState<string>("");
 
   // Verificar se usuário é síndico
   const isSindico =
@@ -265,13 +268,14 @@ export default function FinancialDashboard() {
         // 1. Get User's Condominio
         const { data: userData } = await supabase
           .from("users")
-          .select("condominio_id")
+          .select("condominio_id, condominios(name)")
           .eq("id", user?.id)
           .single();
 
         if (!userData?.condominio_id) return;
 
         setCondominioId(userData.condominio_id);
+        setCondominioName((userData.condominios as any)?.name || "Condomínio");
 
         // 2. Fetch Transactions
         let query = supabase
@@ -390,6 +394,35 @@ export default function FinancialDashboard() {
     amarelo: "bg-amber-500",
     vermelho: "bg-rose-600",
   };
+
+  const budgetPlanData = useMemo(() => {
+    const groupedByCategory: Record<string, any> = {};
+
+    budgetAlerts.forEach((alert) => {
+      const key = alert.category_code;
+      if (!groupedByCategory[key]) {
+        groupedByCategory[key] = {
+          category_code: alert.category_code,
+          category_name: alert.category_name,
+          monthly_limit: alert.monthly_limit,
+          annual_limit: alert.annual_limit,
+          spent_by_month: {},
+          spent_year: 0,
+        };
+      }
+
+      if (alert.month_ref) {
+        groupedByCategory[key].spent_by_month[alert.month_ref] =
+          alert.spent_month;
+      }
+      groupedByCategory[key].spent_year = Math.max(
+        groupedByCategory[key].spent_year,
+        alert.spent_year || 0,
+      );
+    });
+
+    return Object.values(groupedByCategory);
+  }, [budgetAlerts]);
 
   const chartData = useMemo(() => {
     // Se nenhum período selecionado, retornar vazio
@@ -622,6 +655,12 @@ export default function FinancialDashboard() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setShowBudgetPlanModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors text-sm"
+            >
+              📊 Ver Planilha Anual
+            </button>
             <label className="text-sm text-slate-600" htmlFor="alert-month">
               Mês ref. (AAAA-MM)
             </label>
@@ -982,6 +1021,16 @@ export default function FinancialDashboard() {
           style={{ pointerEvents: "auto" }}
         />
       )}
+
+      {/* Budget Plan Modal */}
+      <BudgetPlanModal
+        isOpen={showBudgetPlanModal}
+        onClose={() => setShowBudgetPlanModal(false)}
+        budgetData={budgetPlanData}
+        year={new Date().getFullYear()}
+        condominioId={condominioId}
+        condominioName={condominioName}
+      />
     </PageLayout>
   );
 }
