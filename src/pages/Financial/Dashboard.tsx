@@ -253,11 +253,32 @@ export default function FinancialDashboard() {
     profile?.role === "sub_sindico" ||
     profile?.role === "admin";
 
-  // Inicializar com mês atual
+  // Calcular períodos disponíveis baseado em transações (será atualizado após fetch)
+  const availablePeriods = useMemo(() => {
+    if (transactions.length === 0) return [];
+
+    // Extrair todos os meses únicos das transações
+    const months = new Set(
+      transactions.map((t) => t.reference_month.slice(0, 7)),
+    );
+
+    // Converter para array, ordenar e retornar
+    return Array.from(months).sort();
+  }, [transactions]);
+
+  // Inicializar com todos os períodos disponíveis (ou mês atual se nenhum dado)
   useEffect(() => {
-    const currentPeriod = new Date().toISOString().slice(0, 7);
-    setSelectedPeriods([currentPeriod]);
-  }, []);
+    if (selectedPeriods.length === 0) {
+      if (availablePeriods.length > 0) {
+        // Se temos dados, selecionar do primeiro mês até o último mês com dados
+        setSelectedPeriods(availablePeriods);
+      } else {
+        // Fallback para o mês atual se não houver dados
+        const currentPeriod = new Date().toISOString().slice(0, 7);
+        setSelectedPeriods([currentPeriod]);
+      }
+    }
+  }, [availablePeriods]);
 
   // Fetch Data
   useEffect(() => {
